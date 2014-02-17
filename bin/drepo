@@ -1,0 +1,139 @@
+#!/usr/bin/env ruby
+
+# Notes:
+
+# drepo init [location]
+#   - Setup a new repository
+#   - Not a highest priority
+#
+#   - Create the repo config
+#   - Use reprepro to initialize files
+#   - Generate signing key
+
+# drepo add --git [addr] --branch [devel-branch]
+#       add --deb [path] --name [pkg-name]
+#
+#   - Rip off the old add script
+#   - Add special handling for deb files alone
+
+# drepo build [pkg-name] [-f]
+#       build [pkg-name] --scratch [topic-branch]
+#
+#   - The old script basically
+#   - Change versions to date stamps
+#   - Add support for scratch suite builds
+
+# drepo release [pkg-name]
+#       release [pkg-name] --scratch
+#
+#   - Move the current devel package to release
+#   - Or alternatively move the current devel package
+
+# drepo remove [pkg-or-deb-name]
+#
+#   - Remove a single deb
+#   - Remove all the packages related to a git package
+
+# drepo rebuild-all [-f]
+#
+#   - Just rebuild all the packages
+
+# drepo release-all
+#
+#   - Push all the packages from devel to release
+
+# make sure locking works properly
+
+require "thor"
+
+require "mkpkg/repo"
+
+class RepoCLI < Thor
+  desc "init [LOCATION]", "setup a whole new repository from scratch"
+  def init(location=".")
+    say "Initialising a debian repository at '#{location}'"
+
+    repo_conf = {
+      :name => "Debian Repository",
+      :desc => "",
+      :arches => ["amd64"],
+      :components => ["main"],
+      :key => nil,
+      :suites => ["stable", "testing", "unstable"],
+      :codenames => []
+    }
+
+    name = ask "Repository name [#{repo_conf[:name]}]:"
+    repo_conf[:name] = name if name.length > 0
+
+    desc = ask "Description [#{repo_conf[:desc]}]"
+    repo_conf[:desc] = desc if desc.length > 0
+
+    arches = ask "Architectures [#{repo_conf[:arches].join " "}]:"
+    repo_conf[:arches] = arches.split /\s+/ if arches.length > 0
+
+    components = ask "Components [#{repo_conf[:components].join " "}]:"
+    repo_conf[:components] = components.split /\s+/ if components.length > 0
+
+    key = ask "GPG key [generate new one]:"
+    if key.length > 0
+      repo_conf[:key] = key
+    else
+      say "Starting rngd ..."
+      say "Root permissions required. Please enter your sudo password bellow:"
+      Kernel.system "sudo rngd -r /dev/urandom"
+      say "Generating the GPG key ..."
+      name = ask "Cert owner name:"
+      email = ask "Cert owner e-mail:"
+      pass = ask "Passphrase:"
+
+      passphrase = "Passphrase: #{pass}" if pass.length > 0
+      gpg_cmd = <<-END
+        gpg --batch --gen-key <<EOF
+        Key-Type: RSA
+        Key-Length: 2048
+        Name-Real: #{name}
+        Name-Email: #{email}
+        #{passphrase}
+        Expire-Date: 0
+        %commit
+        EOF
+      END
+
+      gpg_cmd_output = `#{gpg_cmd}`
+      conf[:key] = gpg_cmd_output.match(/gpg: key ([^ ]+) /).captures[0]
+    end
+
+    suites = ask "Suites [#{repo_conf[:suites].join " "}]:"
+    repo_conf[:suites] = suites.split /\s+/ if suites.length > 0
+
+    repo_conf[:suites].each do |s|
+      codename = ask "Codename for '#{s}':"
+      repo_conf[:codenames].push codename
+    end
+
+    p repo_conf
+  end
+
+  #method_option :key, :aliases => "-k",
+  #                    :desc => "Use an existing gpg key instead of creating a new one"
+  #def add()
+  #end
+
+  #def build()
+  #end
+
+  #def release()
+  #end
+
+  #def remove()
+  #end
+
+  #def rebuild_all()
+  #end
+
+  #def release_all()
+  #end
+end
+
+RepoCLI.start ARGV
