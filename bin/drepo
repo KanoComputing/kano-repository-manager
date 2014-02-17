@@ -114,7 +114,10 @@ class RepoCLI < Thor
 EOF
       END
 
-      gpg_cmd_output = `#{gpg_cmd}`
+      Kernel.system gpg_cmd
+      list_keys = `gpg --list-keys --homeidr #{location}/gnupg-keyring`
+      p list_keys
+
       repo_conf[:key] = gpg_cmd_output.match(/gpg: key ([^ ]+) /).captures[0]
 
       if kill_rngd
