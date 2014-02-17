@@ -97,6 +97,7 @@ class RepoCLI < Thor
       email = ask "Cert owner e-mail:"
       pass = ask "Passphrase:"
 
+      FileUtils.mkdir_p "#{location}/gnupg-keyring"
       passphrase = "Passphrase: #{pass}" if pass.length > 0
       gpg_cmd = <<-END
         gpg --batch --gen-key --homedir #{location}/gnupg-keyring/ <<EOF
