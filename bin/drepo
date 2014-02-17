@@ -45,6 +45,7 @@
 # make sure locking works properly
 
 require "thor"
+require "fileutils"
 
 require "mkpkg/repo"
 
@@ -52,6 +53,8 @@ class RepoCLI < Thor
   desc "init [LOCATION]", "setup a whole new repository from scratch"
   def init(location=".")
     say "Initialising a debian repository at '#{location}'"
+
+    FileUtils.mkdir_p location
 
     repo_conf = {
       :name => "Debian Repository",
@@ -79,9 +82,16 @@ class RepoCLI < Thor
     if key.length > 0
       repo_conf[:key] = key
     else
-      say "Starting rngd ..."
-      say "Root permissions required. Please enter your sudo password bellow:"
-      Kernel.system "sudo rngd -r /dev/urandom"
+      kill_rngd = false
+      unless File.exists? "/var/run/rngd.pid"
+        say "Starting rngd ..."
+        unless Process.euid == 0
+          say "Root permissions required. Please enter your sudo password bellow:"
+        end
+        Kernel.system "sudo rngd -r /dev/urandom"
+        kill_rngd = true
+      end
+
       say "Generating the GPG key ..."
       name = ask "Cert owner name:"
       email = ask "Cert owner e-mail:"
@@ -89,9 +99,11 @@ class RepoCLI < Thor
 
       passphrase = "Passphrase: #{pass}" if pass.length > 0
       gpg_cmd = <<-END
-        gpg --batch --gen-key <<EOF
+        gpg --batch --gen-key --homedir #{location}/gnupg-keyring/ <<EOF
         Key-Type: RSA
         Key-Length: 2048
+        Subkey-Type: ELG-E
+        Subkey-Length: 2048
         Name-Real: #{name}
         Name-Email: #{email}
         #{passphrase}
@@ -102,6 +114,14 @@ class RepoCLI < Thor
 
       gpg_cmd_output = `#{gpg_cmd}`
       conf[:key] = gpg_cmd_output.match(/gpg: key ([^ ]+) /).captures[0]
+
+      if kill_rngd
+        say "Stopping rngd ..."
+        unless Process.euid == 0
+          say "Root permissions required. Please enter your sudo password bellow:"
+        end
+        Kernel.system "sudo kill `cat /var/run/rngd.pid`"
+      end
     end
 
     suites = ask "Suites [#{repo_conf[:suites].join " "}]:"
