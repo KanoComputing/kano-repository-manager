@@ -110,7 +110,7 @@ class RepoCLI < Thor
         #{passphrase}
         Expire-Date: 0
         %commit
-        EOF
+EOF
       END
 
       gpg_cmd_output = `#{gpg_cmd}`
