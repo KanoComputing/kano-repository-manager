@@ -98,6 +98,7 @@ class RepoCLI < Thor
       pass = ask "Passphrase:"
 
       FileUtils.mkdir_p "#{location}/gnupg-keyring"
+      FileUtils.chmod_R 0700, "#{location}/gnupg-keyring"
       passphrase = "Passphrase: #{pass}" if pass.length > 0
       gpg_cmd = <<-END
         gpg --batch --gen-key --homedir #{location}/gnupg-keyring/ <<EOF
@@ -114,7 +115,7 @@ EOF
       END
 
       gpg_cmd_output = `#{gpg_cmd}`
-      conf[:key] = gpg_cmd_output.match(/gpg: key ([^ ]+) /).captures[0]
+      repo_conf[:key] = gpg_cmd_output.match(/gpg: key ([^ ]+) /).captures[0]
 
       if kill_rngd
         say "Stopping rngd ..."
