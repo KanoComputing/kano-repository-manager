@@ -115,10 +115,12 @@ EOF
       END
 
       Kernel.system gpg_cmd
-      list_keys = `gpg --list-keys --homeidr #{location}/gnupg-keyring`
-      p list_keys
+      key_list = `gpg --list-keys --with-colons --homeidr #{location}/gnupg-keyring`.split "\n"
+      key_entry list_keys.grep(/^pub/).grep(name).grep(email)
+      key = key_entry.split(":")[5][5..-1]
 
-      repo_conf[:key] = gpg_cmd_output.match(/gpg: key ([^ ]+) /).captures[0]
+      repo_conf[:key] = key
+      p key
 
       if kill_rngd
         say "Stopping rngd ..."
