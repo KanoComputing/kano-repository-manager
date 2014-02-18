@@ -46,6 +46,7 @@
 
 require "thor"
 require "fileutils"
+require "io/console"
 
 require "mkpkg/repo"
 
@@ -78,58 +79,12 @@ class RepoCLI < Thor
     components = ask "Components [#{repo_conf[:components].join " "}]:"
     repo_conf[:components] = components.split /\s+/ if components.length > 0
 
-    key = ask "GPG key [generate new one]:"
-    if key.length > 0
-      repo_conf[:key] = key
-    else
-      kill_rngd = false
-      unless File.exists? "/var/run/rngd.pid"
-        say "Starting rngd ..."
-        unless Process.euid == 0
-          say "Root permissions required. Please enter your sudo password bellow:"
-        end
-        Kernel.system "sudo rngd -r /dev/urandom"
-        kill_rngd = true
-      end
+    repo_conf[:gpg_name] = ask "Cert owner name:"
+    repo_conf[:gpg_mail] = ask "Cert owner e-mail:"
 
-      say "Generating the GPG key ..."
-      name = ask "Cert owner name:"
-      email = ask "Cert owner e-mail:"
-      pass = ask "Passphrase:"
-
-      FileUtils.mkdir_p "#{location}/gnupg-keyring"
-      FileUtils.chmod_R 0700, "#{location}/gnupg-keyring"
-      passphrase = "Passphrase: #{pass}" if pass.length > 0
-      gpg_cmd = <<-END
-        gpg --batch --gen-key --homedir #{location}/gnupg-keyring/ <<EOF
-        Key-Type: RSA
-        Key-Length: 2048
-        Subkey-Type: ELG-E
-        Subkey-Length: 2048
-        Name-Real: #{name}
-        Name-Email: #{email}
-        #{passphrase}
-        Expire-Date: 0
-        %commit
-EOF
-      END
-
-      Kernel.system gpg_cmd
-      key_list = `gpg --list-keys --with-colons --homeidr #{location}/gnupg-keyring`.split "\n"
-      key_entry list_keys.grep(/^pub/).grep(name).grep(email)
-      key = key_entry.split(":")[5][5..-1]
-
-      repo_conf[:key] = key
-      p key
-
-      if kill_rngd
-        say "Stopping rngd ..."
-        unless Process.euid == 0
-          say "Root permissions required. Please enter your sudo password bellow:"
-        end
-        Kernel.system "sudo kill `cat /var/run/rngd.pid`"
-      end
-    end
+    print "Passphrase: "
+    repo_conf[:gpg_pass] = STDIN.noecho(&:gets).chomp
+    print "\n"
 
     suites = ask "Suites [#{repo_conf[:suites].join " "}]:"
     repo_conf[:suites] = suites.split /\s+/ if suites.length > 0
@@ -139,7 +94,8 @@ EOF
       repo_conf[:codenames].push codename
     end
 
-    p repo_conf
+    r = Mkpkg::Repo.new location
+    r.setup repo_conf
   end
 
   #method_option :key, :aliases => "-k",
