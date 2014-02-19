@@ -2,20 +2,6 @@
 
 # Notes:
 
-# drepo init [location]
-#   - Setup a new repository
-#   - Not a highest priority
-#
-#   - Create the repo config
-#   - Use reprepro to initialize files
-#   - Generate signing key
-
-# drepo add --git [addr] --branch [devel-branch]
-#       add --deb [path] --name [pkg-name]
-#
-#   - Rip off the old add script
-#   - Add special handling for deb files alone
-
 # drepo build [pkg-name] [-f]
 #       build [pkg-name] --scratch [topic-branch]
 #
@@ -51,6 +37,14 @@ require "io/console"
 require "mkpkg/repo"
 
 class RepoCLI < Thor
+  class_option :repo, :type => :string
+  # drepo init [location]
+  #   - Setup a new repository
+  #   - Not a highest priority
+  #
+  #   - Create the repo config
+  #   - Use reprepro to initialize files
+  #   - Generate signing key
   desc "init [LOCATION]", "setup a whole new repository from scratch"
   def init(location=".")
     say "Initialising a debian repository at '#{location}'"
@@ -62,7 +56,6 @@ class RepoCLI < Thor
       :desc => "",
       :arches => ["amd64"],
       :components => ["main"],
-      :key => nil,
       :suites => ["stable", "testing", "unstable"],
       :codenames => []
     }
@@ -79,10 +72,10 @@ class RepoCLI < Thor
     components = ask "Components [#{repo_conf[:components].join " "}]:"
     repo_conf[:components] = components.split /\s+/ if components.length > 0
 
-    repo_conf[:gpg_name] = ask "Cert owner name:"
-    repo_conf[:gpg_mail] = ask "Cert owner e-mail:"
+    repo_conf[:gpg_name] = ask "Cert owner name (required):"
+    repo_conf[:gpg_mail] = ask "Cert owner e-mail (required):"
 
-    print "Passphrase: "
+    print "Passphrase (optional): "
     repo_conf[:gpg_pass] = STDIN.noecho(&:gets).chomp
     print "\n"
 
@@ -98,10 +91,39 @@ class RepoCLI < Thor
     r.setup repo_conf
   end
 
-  #method_option :key, :aliases => "-k",
-  #                    :desc => "Use an existing gpg key instead of creating a new one"
-  #def add()
-  #end
+  # drepo add [-o] --git [addr] --branch [devel-branch]
+  #       add [-o] --deb [path] --name [pkg-name]
+  #
+  #   - Rip off the old add script
+  #   - Add special handling for deb files alone
+  #   - -o override package or source
+  desc "add", "introduce a new package to the build system"
+  method_option :git, :aliases => "-g", :desc => "Add source package managed in a git repo"
+  method_option :deb, :aliases => "-d", :desc => "Add a prebuilt binary deb package only"
+  method_option :override, :aliases => "-o", :desc => "Proceed even if the package already exists"
+  method_option :branch, :aliases => "-b", :desc => "Use a specific branch (valid only with --git)"
+  method_option :suite, :aliases => "-s", :desc => "Specify target suite", :required => true
+  method_option :component, :aliases => "-c", :desc => "Specify target component (defaults to main)"
+  def add
+    if options.has_key? :repo
+      repo = Mkpkg::Repo.new options[:repo]
+    else
+      # TODO: Get it from the configuration file in the future
+      raise ArgumentError, "--repo option missing"
+    end
+
+    case
+    when options.has_key?(:git)
+      branch = "main"
+      branch = options[:branch] if options.has_key? :branch
+
+      repo.add_git_pkg options[:git], branch
+    when options.has_key?(:deb)
+      repo.add_deb_pkg options[:git]
+    else
+      raise ArgumentError, "Either --git or --deb must be specified"
+    end
+  end
 
   #def build()
   #end

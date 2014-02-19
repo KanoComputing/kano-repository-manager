@@ -45,6 +45,25 @@ module Mkpkg
       FileUtils.mkdir_p "#{@location}/builds"
     end
 
+    def add_git_pkg(repo_addr, branch)
+    end
+
+    def add_deb_pkg(deb_file, suite=nil, compone=nil)
+      src_name = `dpkg-deb --info #{deb_file}`.grep(/^ Source:/)[9..-1]
+
+      if File.exists? "#{@location}/source/#{src_name}"
+        raise "There's a git source '#{src_name}' set up that already " +
+              "covers this deb package. Add -f to force inclusion."
+      end
+
+      builds_dir = "#{@location}/builds/#{src_name}"
+      FileUtils.mkdir_p builds_dir
+
+      FileUtils.cp "#{deb_file}", "#{builds_dir}/"
+      `reprepro -b #{@location}/archive includedeb #{suite} -C #{component} \
+                #{deb_file}`
+    end
+
     private
     def generate_gpg_key(name, email, pass)
       kill_rngd = false
