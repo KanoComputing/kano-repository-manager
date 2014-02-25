@@ -5,8 +5,11 @@ require "fileutils"
 
 module Mkpkg
   class Repo
+    attr_reader :location
+
     def initialize(loc)
-      @location = loc
+      @location = File.realpath loc
+      @br_archive = "#{@location}/build-root.tar.gz"
     end
 
     # TODO: Error checking, fool-proofing
@@ -41,38 +44,194 @@ module Mkpkg
         end
       end
 
-      FileUtils.mkdir_p "#{@location}/sources"
-      FileUtils.mkdir_p "#{@location}/builds"
+      FileUtils.mkdir_p "#{@location}/packages"
+
+      Dir.mktmpdir do |tmp|
+        extra_pkgs = "sudo,vim,ca-certificates,fakeroot,build-essential,devscripts,debhelper,git,bc,locales,equivs,pkg-config"
+        repo = "http://mirrordirector.raspbian.org/raspbian/"
+
+        broot = "#{tmp}/broot"
+        FileUtils.mkdir_p "#{tmp}/broot"
+
+        begin
+          puts "Bootstrapping Raspian (first stage)"
+          Kernel.system "sudo debootstrap --foreign --variant=buildd --no-check-gpg \
+           --include=#{extra_pkgs} --arch=armhf wheezy #{broot} #{repo}"
+
+          qemu_path = `which qemu-arm-static`.chomp
+          `sudo cp #{qemu_path} #{broot}/usr/bin`
+
+          puts "Bootstrapping Raspian (ARM stage)"
+          Kernel.system "sudo chroot #{broot} /debootstrap/debootstrap --second-stage"
+
+          puts "Basic customization: raspbian repositories and regular user account"
+          Kernel.system "sudo chroot #{broot} <<EOF
+           echo 'deb http://mirrordirector.raspbian.org/raspbian wheezy main contrib non-free rpi' >> /etc/apt/sources.list
+           echo 'deb-src http://mirrordirector.raspbian.org/raspbian wheezy main contrib non-free rpi' >> /etc/apt/sources.list
+
+           echo 'en_US.UTF-8 UTF-8' >/etc/locale.gen
+           locale-gen en_US.UTF-8
+
+           cat >>/etc/bash.bashrc <<EOF2
+             export LANG=en_US.UTF-8
+             export LC_TYPE=en_US.UTF-8
+             export LC_ALL=en_US.UTF-8
+             export LANGUAGE=en_US.UTF8
+EOF2
+EOF"
+
+          Kernel.system "sudo chroot #{broot} apt-get update"
+          Kernel.system "sudo chroot #{broot} useradd -m -s /bin/bash raspbian"
+
+          Kernel.system "sudo tar cz -C #{broot} -f #{@br_archive} `ls -1 #{broot}`"
+        ensure
+          Kernel.system "sudo rm -rf #{broot}"
+        end
+      end
     end
 
-    def add_git_pkg(repo_addr, branch)
-    end
-
-    def add_deb_pkg(deb_file, suite=nil, compone=nil)
-      src_name = `dpkg-deb --info #{deb_file}`.grep(/^ Source:/)[9..-1]
-
-      if File.exists? "#{@location}/source/#{src_name}"
-        raise "There's a git source '#{src_name}' set up that already " +
-              "covers this deb package. Add -f to force inclusion."
+    def list_packages
+      pkgs = []
+      Dir.foreach "#{@location}/packages" do |pkg_name|
+        pkgs.push get_package pkg_name unless pkg_name =~ /^\./
       end
 
-      builds_dir = "#{@location}/builds/#{src_name}"
-      FileUtils.mkdir_p builds_dir
+      pkgs
+    end
 
-      FileUtils.cp "#{deb_file}", "#{builds_dir}/"
-      `reprepro -b #{@location}/archive includedeb #{suite} -C #{component} \
-                #{deb_file}`
+    def get_package(name)
+      unless File.exists? "#{@location}/packages/#{name}"
+        raise "Package '#{name}' doesn't exist in the repo."
+      end
+
+      if File.exists? "#{@location}/packages/#{name}/source"
+        GitPackage.new name, self
+      else
+        DebPackage.new name, self
+      end
+    end
+
+    def get_suites
+      suites = nil
+      File.open "#{@location}/archive/conf/distributions", "r" do |f|
+        suites = f.read.split "\n\n"
+      end
+
+      suites.map do |s|
+        suite = nil
+        codename = nil
+        s.each_line do |l|
+          m = l.match /^Suite: (.+)/
+          suite = m.captures[0].chomp if m
+
+          m = l.match /^Codename: (.+)/
+          codename = m.captures[0].chomp if m
+        end
+        [suite, codename]
+      end
+    end
+
+    def query_for_version(suite, pkg_name)
+      v = `reprepro --basedir #{location}/archive --list-format '${version}' list #{suite} #{pkg_name} 2>/dev/null`.chomp
+      v = nil unless v.length > 0
+      v
+    end
+
+    def push(pkg_name, version, suite, force=false)
+      pkg = get_package pkg_name
+
+      if version
+        unless pkg.build_exists? version
+          raise "Build version '#{version}' not found."
+        end
+      else
+        raise "No #{pkg_name} build found found." if pkg.history.length == 0
+        version = pkg.history[0]
+      end
+
+      if suite
+        cmp = get_suites.map { |n, cn| suite == n || suite == cn }
+        suite_exists = cmp.inject(false) { |r, o| r || o }
+        raise "Suite '#{suite}' doesn't exist." unless suite_exists
+      else
+        # FIXME: This should be configurable
+        suite = "testing"
+      end
+
+      current_version = query_for_version suite, pkg.name
+
+      if current_version != nil && current_version >= version
+        if force
+          Kernel.system "reprepro -b #{@location}/archive --gnupghome #{location}/gnupg-keyring/ removesrc #{suite} #{pkg.name}"
+        else
+          raise "The same package of a higher version (#{version}) is " +
+                "already in the repo."
+        end
+      end
+
+      debs = Dir["#{@location}/packages/#{pkg.name}/builds/#{version}/*"]
+      Kernel.system "reprepro -b #{@location}/archive --gnupghome #{location}/gnupg-keyring/ includedeb #{suite} #{debs.join " "}"
+    end
+
+    def unpush(pkg_name, suite)
+      pkg = get_package pkg_name
+
+      cmp = get_suites.map { |n, cn| suite == n || suite == cn }
+      suite_exists = cmp.inject(false) { |r, o| r || o }
+      raise "Suite '#{suite}' doesn't exist." unless suite_exists
+
+      version = query_for_version pkg_name, suite
+
+      if version
+        Kernel.system "reprepro -b #{@location}/archive --gnupghome #{location}/gnupg-keyring/ removesrc #{suite} #{pkg.name}"
+      else
+        raise "Package #{pkg_name} is not included in #{suite}."
+      end
+    end
+
+    def remove(pkg_name, force=false)
+      pkg = get_package pkg_name
+
+      versions = get_suites.map { |n, cn| query_for_version pkg_name, n }
+      used = versions.inject(false) { |r, v| r || true if v != nil }
+      p versions
+      p used
+
+      if used
+        raise "The '#{pkg_name}' package is still used." unless force
+
+        get_suites.zip(versions).each do |suite, version|
+          unpush pkg_name, suite[0] if version != nil
+        end
+      end
+
+      if !used || force
+        p "Would remove!"
+        #FileUtils.rm_rf "#{location}/packages/#{pkg_name}"
+      end
+    end
+
+    def buildroot
+      Dir.mktmpdir do |tmp|
+        puts "Setting up the build-root ..."
+        Kernel.system "sudo tar xz -C #{tmp} -f #{@br_archive}"
+        begin
+          yield tmp
+        ensure
+          Kernel.system "sudo rm -rf #{tmp}/*"
+        end
+      end
     end
 
     private
     def generate_gpg_key(name, email, pass)
-      kill_rngd = false
-      unless File.exists? "/var/run/rngd.pid"
-        print "Starting rngd (root permissions required) ... "
-        Kernel.system "sudo rngd -p #{@location}/rngd.pid -r /dev/urandom"
-        kill_rngd = true
-        puts "[OK]"
-      end
+      #kill_rngd = false
+      #unless File.exists? "/var/run/rngd.pid"
+      #  print "Starting rngd (root permissions required) ... "
+      #  Kernel.system "sudo rngd -p #{@location}/rngd.pid -r /dev/urandom"
+      #  kill_rngd = true
+      #  puts "[OK]"
+      #end
 
       FileUtils.mkdir_p "#{@location}/gnupg-keyring"
       FileUtils.chmod_R 0700, "#{@location}/gnupg-keyring"
@@ -90,7 +249,7 @@ module Mkpkg
         #{passphrase}
         Expire-Date: 0
         %commit
-  EOF
+EOF
       END
 
       Kernel.system gpg_cmd
@@ -100,12 +259,12 @@ module Mkpkg
       key = key_entry[0].split(":")[4][8..-1]
       puts "[OK]"
 
-      if kill_rngd
-        print "Stopping rngd (root permissions required) ... "
-        Kernel.system "sudo kill `cat #{@location}/rngd.pid`"
-        Kernel.system "sudo rm -f #{@location}/rngd.pid"
-        puts "[OK]"
-      end
+      #if kill_rngd
+      #  print "Stopping rngd (root permissions required) ... "
+      #  Kernel.system "sudo kill `cat #{@location}/rngd.pid`"
+      #  Kernel.system "sudo rm -f #{@location}/rngd.pid"
+      #  puts "[OK]"
+      #end
 
       key
     end

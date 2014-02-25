@@ -15,7 +15,7 @@ Gem::Specification.new do |spec|
                           the Debian one) and helps you to create, maintain,
                           and distribute your own packages through your
                           own repositories.}
-  spec.homepage      = "http://github.com/KanoComputing/"
+  spec.homepage      = "http://github.com/KanoComputing/kano-package-system"
   spec.license       = "GPLv2"
 
   spec.files         = `git ls-files`.split($/)
@@ -24,6 +24,7 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
 
   spec.add_dependency "thor", "~> 0.18.1"
+  spec.add_dependency "grit", "~> 2.5.0"
 
   spec.add_development_dependency "bundler", "~> 1.5"
   spec.add_development_dependency "rake"

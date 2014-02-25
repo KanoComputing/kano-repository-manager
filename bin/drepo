@@ -2,13 +2,6 @@
 
 # Notes:
 
-# drepo build [pkg-name] [-f]
-#       build [pkg-name] --scratch [topic-branch]
-#
-#   - The old script basically
-#   - Change versions to date stamps
-#   - Add support for scratch suite builds
-
 # drepo release [pkg-name]
 #       release [pkg-name] --scratch
 #
@@ -35,6 +28,46 @@ require "fileutils"
 require "io/console"
 
 require "mkpkg/repo"
+require "mkpkg/gitpackage"
+require "mkpkg/debpackage"
+
+class List < Thor
+  desc "packages", "show a list of source packages in the repo"
+  def packages()
+    if options.has_key? "repo"
+      repo = Mkpkg::Repo.new options["repo"]
+    else
+      repo = Mkpkg::Repo.new Dir.pwd
+    end
+
+    repo.list_packages.each do |pkg|
+      puts pkg.name
+    end
+  end
+
+  desc "versions PACKAGE", "show a history of all available package versions"
+  def versions(pkg_name)
+    if options.has_key? "repo"
+      repo = Mkpkg::Repo.new options["repo"]
+    else
+      repo = Mkpkg::Repo.new Dir.pwd
+    end
+
+    suites = repo.get_suites
+
+    pkg = repo.get_package pkg_name
+    pkg.history.each do |version|
+      line = "#{version}"
+      suites.each do |suite, codename|
+        codename = suite if codename == nil
+        if repo.query_for_version(suite, pkg.name) == version
+          line << " [#{codename}]"
+        end
+      end
+      puts line
+    end
+  end
+end
 
 class RepoCLI < Thor
   class_option :repo, :type => :string
@@ -79,8 +112,9 @@ class RepoCLI < Thor
     repo_conf[:gpg_pass] = STDIN.noecho(&:gets).chomp
     print "\n"
 
-    suites = ask "Suites [#{repo_conf[:suites].join " "}]:"
-    repo_conf[:suites] = suites.split /\s+/ if suites.length > 0
+    # Don't ask for suites (we need three anyway)
+    #suites = ask "Suites [#{repo_conf[:suites].join " "}]:"
+    #repo_conf[:suites] = suites.split /\s+/ if suites.length > 0
 
     repo_conf[:suites].each do |s|
       codename = ask "Codename for '#{s}':"
@@ -100,45 +134,103 @@ class RepoCLI < Thor
   desc "add", "introduce a new package to the build system"
   method_option :git, :aliases => "-g", :desc => "Add source package managed in a git repo"
   method_option :deb, :aliases => "-d", :desc => "Add a prebuilt binary deb package only"
-  method_option :override, :aliases => "-o", :desc => "Proceed even if the package already exists"
-  method_option :branch, :aliases => "-b", :desc => "Use a specific branch (valid only with --git)"
-  method_option :suite, :aliases => "-s", :desc => "Specify target suite", :required => true
-  method_option :component, :aliases => "-c", :desc => "Specify target component (defaults to main)"
+  method_option :force, :aliases => "-f", :desc => "Proceed even if the package already exists"
+  method_option :branch, :aliases => "-b", :desc => "Set a default branch other than master (valid only with --git)"
   def add
-    if options.has_key? :repo
-      repo = Mkpkg::Repo.new options[:repo]
-    else
-      # TODO: Get it from the configuration file in the future
-      raise ArgumentError, "--repo option missing"
-    end
+    repo = get_repo_handle
 
     case
-    when options.has_key?(:git)
-      branch = "main"
-      branch = options[:branch] if options.has_key? :branch
+    when options.has_key?("git")
+      branch = "master"
+      branch = options["branch"] if options.has_key? "branch"
 
-      repo.add_git_pkg options[:git], branch
-    when options.has_key?(:deb)
-      repo.add_deb_pkg options[:git]
+      Mkpkg::GitPackage::setup repo, options["git"], branch
+    when options.has_key?("deb")
+      Mkpkg::DebPackage::setup repo, options["deb"]
     else
       raise ArgumentError, "Either --git or --deb must be specified"
     end
   end
 
-  #def build()
-  #end
+  # drepo build [pkg-name] --branch [topic-branch]
+  # drepo build [pkg-name] --branch [topic-branch] --push [suite] -f
+  #
+  #   - The old script basically
+  #   - Change versions to date stamps
+  #   - Add support for scratch suite builds
+  desc "build [pkg-name]", "build a package from the sources"
+  method_option :branch, :aliases => "-b", :type => :string,
+                :desc => "build from a different branch"
+  method_option :push, :aliases => "-p", :type => :string,
+                :desc => "push to suite immediately after building"
+  method_option :force, :aliases => "-f", :type => :boolean,
+                :desc => "force build even when no changes have been made"
+  def build(pkg_name)
+    repo = get_repo_handle
 
-  #def release()
-  #end
+    force = false
+    force = options["force"] if options.has_key? "force"
 
-  #def remove()
-  #end
+    branch = nil
+    branch = options["branch"] if options.has_key? "branch"
 
-  #def rebuild_all()
-  #end
+    pkg = repo.get_package pkg_name
+    version = pkg.build branch, force
 
-  #def release_all()
-  #end
+    if options["push"] && version
+      if options["push"] == "push"
+        repo.push pkg.name, version, "testing" # FIXME: should be configurable
+      else
+        repo.push pkg.name, version, options["push"]
+      end
+    end
+  end
+
+  # drepo push [pkg-name] -f --suite X --version Y
+  desc "push [pkg-name]", "push a built package to a specified suite"
+  method_option :suite, :aliases => "-s", :type => :string,
+                :desc => "the target suite (defaults to testing)"
+  method_option :version, :aliases => "-v", :type => :string,
+                :desc => "which version to push (defaults to the highest one build)"
+  method_option :force, :aliases => "-f", :type => :boolean,
+                :desc => "force inclusion of the package to the suite"
+  def push(pkg_name)
+    repo = get_repo_handle
+
+    suite = nil
+    suite = options["suite"] if options.has_key? "suite"
+
+    version = nil
+    version = options["version"] if options.has_key? "version"
+
+    repo.push pkg_name, version, suite, options["force"] == true
+  end
+
+  desc "unpush [pkg-name] [suite]", "remove a built package from a suite"
+  def unpush(pkg_name, suite)
+    repo = get_repo_handle
+    repo.unpush pkg_name, suite
+  end
+
+  desc "list SUBCOMMAND [ARGS]", "show information about packages"
+  subcommand "list", List
+
+  desc "remove [pkg-name]", "remove a package completely from the build system"
+  method_option :force, :aliases => "-f", :type => :boolean,
+                :desc => "force removal even if the package is still used"
+  def remove(pkg_name)
+    repo = get_repo_handle
+    repo.remove pkg_name, options["force"] == true
+  end
+
+  private
+  def get_repo_handle
+    if options.has_key? "repo"
+      Mkpkg::Repo.new options["repo"]
+    else
+      Mkpkg::Repo.new Dir.pwd
+    end
+  end
 end
 
 RepoCLI.start ARGV
