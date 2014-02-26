@@ -1,5 +1,6 @@
 require "mkpkg/package"
 require "mkpkg/pkgversion"
+require "mkpkg/shellcmd"
 
 module Mkpkg
   class GitPackage < Package
@@ -43,7 +44,11 @@ module Mkpkg
       super name, repo
 
       @git_dir = "#{repo.location}/packages/#{name}/source"
-      @default_branch = `git --git-dir #{@git_dir} branch`.chomp.lines.grep(/^*/)[0][2..-1]
+
+      git_cmd = ShellCmd.new "git --git-dir #{@git_dir} branch", {
+        :tag => "git-clone"
+      }
+      @default_branch = git_cmd.out.chomp.lines.grep(/^*/)[0][2..-1]
     end
 
     def build(branch=nil, force=false)
@@ -52,7 +57,7 @@ module Mkpkg
       version = nil
       orig_rev, curr_rev = update_from_origin branch
       if curr_rev != orig_rev || force
-        @repo.buildroot do |br|
+        @repo.buildroot.open do |br|
           src_dir = "#{br}/source"
           FileUtils.mkdir_p src_dir
 

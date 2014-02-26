@@ -1,28 +1,5 @@
 #!/usr/bin/env ruby
 
-# Notes:
-
-# drepo release [pkg-name]
-#       release [pkg-name] --scratch
-#
-#   - Move the current devel package to release
-#   - Or alternatively move the current devel package
-
-# drepo remove [pkg-or-deb-name]
-#
-#   - Remove a single deb
-#   - Remove all the packages related to a git package
-
-# drepo rebuild-all [-f]
-#
-#   - Just rebuild all the packages
-
-# drepo release-all
-#
-#   - Push all the packages from devel to release
-
-# make sure locking works properly
-
 require "thor"
 require "fileutils"
 require "io/console"
@@ -31,27 +8,38 @@ require "mkpkg/repo"
 require "mkpkg/gitpackage"
 require "mkpkg/debpackage"
 
-class List < Thor
+require "mkpkg/shellcmd"
+require "mkpkg/logger"
+
+class ExtendedThor < Thor
+  private
+  include Mkpkg::Logger
+
+  def get_repo_handle
+    if options.has_key? "repo"
+      Mkpkg::Repo.new options["repo"]
+    else
+      log :warn, "No repo was specified, using '#{Dir.pwd}'."
+      Mkpkg::Repo.new Dir.pwd
+    end
+  end
+end
+
+class List < ExtendedThor
   desc "packages", "show a list of source packages in the repo"
   def packages()
-    if options.has_key? "repo"
-      repo = Mkpkg::Repo.new options["repo"]
-    else
-      repo = Mkpkg::Repo.new Dir.pwd
-    end
+    repo = get_repo_handle
+    log :info, "Listing all source packages in the repository"
 
     repo.list_packages.each do |pkg|
-      puts pkg.name
+      log :info, "  #{pkg.name}"
     end
   end
 
   desc "versions PACKAGE", "show a history of all available package versions"
   def versions(pkg_name)
-    if options.has_key? "repo"
-      repo = Mkpkg::Repo.new options["repo"]
-    else
-      repo = Mkpkg::Repo.new Dir.pwd
-    end
+    repo = get_repo_handle
+    log :info, "Listing all built versions of '#{pkg_name}'"
 
     suites = repo.get_suites
 
@@ -64,25 +52,17 @@ class List < Thor
           line << " [#{codename}]"
         end
       end
-      puts line
+      log :info, "  #{line}"
     end
   end
 end
 
-class RepoCLI < Thor
+class RepoCLI < ExtendedThor
   class_option :repo, :type => :string
-  # drepo init [location]
-  #   - Setup a new repository
-  #   - Not a highest priority
-  #
-  #   - Create the repo config
-  #   - Use reprepro to initialize files
-  #   - Generate signing key
+
   desc "init [LOCATION]", "setup a whole new repository from scratch"
   def init(location=".")
-    say "Initialising a debian repository at '#{location}'"
-
-    FileUtils.mkdir_p location
+    log :info, "Initialising a debian repository at '#{location.fg("blue")}'"
 
     repo_conf = {
       :name => "Debian Repository",
@@ -93,31 +73,36 @@ class RepoCLI < Thor
       :codenames => []
     }
 
-    name = ask "Repository name [#{repo_conf[:name]}]:"
+    name = ask "  Repository name "<< "[#{repo_conf[:name].fg("yellow")}]:"
     repo_conf[:name] = name if name.length > 0
 
-    desc = ask "Description [#{repo_conf[:desc]}]"
+    desc = ask "  Description [#{repo_conf[:desc]}]:"
     repo_conf[:desc] = desc if desc.length > 0
 
-    arches = ask "Architectures [#{repo_conf[:arches].join " "}]:"
+    arches = ask "  Architectures [#{repo_conf[:arches].join(" ").fg("yellow")}]:"
     repo_conf[:arches] = arches.split /\s+/ if arches.length > 0
 
-    components = ask "Components [#{repo_conf[:components].join " "}]:"
+    components = ask "  Components [#{repo_conf[:components].join(" ").fg("yellow")}]:"
     repo_conf[:components] = components.split /\s+/ if components.length > 0
 
-    repo_conf[:gpg_name] = ask "Cert owner name (required):"
-    repo_conf[:gpg_mail] = ask "Cert owner e-mail (required):"
+    repo_conf[:gpg_name] = ""
+    while repo_conf[:gpg_name].length == 0
+      repo_conf[:gpg_name] = ask "  Cert owner name (#{"required".fg("red")}):"
+      repo_conf[:gpg_name].strip!
+    end
 
-    print "Passphrase (optional): "
+    repo_conf[:gpg_mail] = ""
+    while repo_conf[:gpg_mail].length == 0
+      repo_conf[:gpg_mail] = ask "  Cert owner e-mail (#{"required".fg("red")}):"
+      repo_conf[:gpg_mail].strip!
+    end
+
+    print "  Passphrase (#{"optional".fg("green")}): "
     repo_conf[:gpg_pass] = STDIN.noecho(&:gets).chomp
     print "\n"
 
-    # Don't ask for suites (we need three anyway)
-    #suites = ask "Suites [#{repo_conf[:suites].join " "}]:"
-    #repo_conf[:suites] = suites.split /\s+/ if suites.length > 0
-
     repo_conf[:suites].each do |s|
-      codename = ask "Codename for '#{s}':"
+      codename = ask "  Codename for '#{s.fg("yellow")}':"
       repo_conf[:codenames].push codename
     end
 
@@ -125,17 +110,15 @@ class RepoCLI < Thor
     r.setup repo_conf
   end
 
-  # drepo add [-o] --git [addr] --branch [devel-branch]
-  #       add [-o] --deb [path] --name [pkg-name]
-  #
-  #   - Rip off the old add script
-  #   - Add special handling for deb files alone
-  #   - -o override package or source
   desc "add", "introduce a new package to the build system"
-  method_option :git, :aliases => "-g", :desc => "Add source package managed in a git repo"
-  method_option :deb, :aliases => "-d", :desc => "Add a prebuilt binary deb package only"
-  method_option :force, :aliases => "-f", :desc => "Proceed even if the package already exists"
-  method_option :branch, :aliases => "-b", :desc => "Set a default branch other than master (valid only with --git)"
+  method_option :git, :aliases => "-g",
+    :desc => "Add source package managed in a git repo"
+  method_option :deb, :aliases => "-d",
+    :desc => "Add a prebuilt binary deb package only"
+  method_option :force, :aliases => "-f",
+    :desc => "Proceed even if the package already exists"
+  method_option :branch, :aliases => "-b",
+    :desc => "Set a default branch other than master (valid only with --git)"
   def add
     repo = get_repo_handle
 
@@ -222,15 +205,10 @@ class RepoCLI < Thor
     repo = get_repo_handle
     repo.remove pkg_name, options["force"] == true
   end
-
-  private
-  def get_repo_handle
-    if options.has_key? "repo"
-      Mkpkg::Repo.new options["repo"]
-    else
-      Mkpkg::Repo.new Dir.pwd
-    end
-  end
 end
 
-RepoCLI.start ARGV
+#begin
+  RepoCLI.start ARGV
+#rescue Exception => e
+#  Mkpkg::Logger.log :err, e.to_s
+#end

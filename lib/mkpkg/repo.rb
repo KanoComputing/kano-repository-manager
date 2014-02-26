@@ -1,24 +1,41 @@
 require "mkpkg/gitpackage"
 require "mkpkg/debpackage"
 
+require "mkpkg/shellcmd"
+require "mkpkg/logger"
+require "mkpkg/gnupg"
+require "mkpkg/buildroot"
+
 require "fileutils"
 
 module Mkpkg
   class Repo
+    include Logger
+
     attr_reader :location
 
     def initialize(loc)
-      @location = File.realpath loc
-      @br_archive = "#{@location}/build-root.tar.gz"
+      @location = File.expand_path loc
     end
 
-    # TODO: Error checking, fool-proofing
     def setup(conf)
+      log :info, "Creating the archive directory"
+
+      begin
+        FileUtils.mkdir_p location
+      rescue Exception => e
+        log :err, "Unable to create a directory at '#{@location.fg("blue")}'"
+        raise e
+      end
+
+      FileUtils.mkdir_p "#{@location}/archive"
+
+      gpg = GnuPG.new "#{@location}/gnupg-keyring"
+      key = gpg.generate_key conf[:gpg_name], conf[:gpg_mail], conf[:gpg_pass]
+      gpg.export_pub key, "#{@location}/archive/repo.gpg.key"
+
+      log :info, "Writing the configuration file"
       FileUtils.mkdir_p "#{@location}/archive/conf"
-
-      key = generate_gpg_key conf[:gpg_name], conf[:gpg_mail], conf[:gpg_pass]
-      export_gpg_pub_key key
-
       File.open "#{@location}/archive/conf/distributions", "w" do |f|
         conf[:suites].each_with_index do |s, i|
           f.puts "Suite: #{s}"
@@ -46,48 +63,7 @@ module Mkpkg
 
       FileUtils.mkdir_p "#{@location}/packages"
 
-      Dir.mktmpdir do |tmp|
-        extra_pkgs = "sudo,vim,ca-certificates,fakeroot,build-essential,devscripts,debhelper,git,bc,locales,equivs,pkg-config"
-        repo = "http://mirrordirector.raspbian.org/raspbian/"
-
-        broot = "#{tmp}/broot"
-        FileUtils.mkdir_p "#{tmp}/broot"
-
-        begin
-          puts "Bootstrapping Raspian (first stage)"
-          Kernel.system "sudo debootstrap --foreign --variant=buildd --no-check-gpg \
-           --include=#{extra_pkgs} --arch=armhf wheezy #{broot} #{repo}"
-
-          qemu_path = `which qemu-arm-static`.chomp
-          `sudo cp #{qemu_path} #{broot}/usr/bin`
-
-          puts "Bootstrapping Raspian (ARM stage)"
-          Kernel.system "sudo chroot #{broot} /debootstrap/debootstrap --second-stage"
-
-          puts "Basic customization: raspbian repositories and regular user account"
-          Kernel.system "sudo chroot #{broot} <<EOF
-           echo 'deb http://mirrordirector.raspbian.org/raspbian wheezy main contrib non-free rpi' >> /etc/apt/sources.list
-           echo 'deb-src http://mirrordirector.raspbian.org/raspbian wheezy main contrib non-free rpi' >> /etc/apt/sources.list
-
-           echo 'en_US.UTF-8 UTF-8' >/etc/locale.gen
-           locale-gen en_US.UTF-8
-
-           cat >>/etc/bash.bashrc <<EOF2
-             export LANG=en_US.UTF-8
-             export LC_TYPE=en_US.UTF-8
-             export LC_ALL=en_US.UTF-8
-             export LANGUAGE=en_US.UTF8
-EOF2
-EOF"
-
-          Kernel.system "sudo chroot #{broot} apt-get update"
-          Kernel.system "sudo chroot #{broot} useradd -m -s /bin/bash raspbian"
-
-          Kernel.system "sudo tar cz -C #{broot} -f #{@br_archive} `ls -1 #{broot}`"
-        ensure
-          Kernel.system "sudo rm -rf #{broot}"
-        end
-      end
+      BuildRoot.new "#{@location}/build_root.tar.gz"
     end
 
     def list_packages
@@ -97,6 +73,10 @@ EOF"
       end
 
       pkgs
+    end
+
+    def buildroot
+      Buildroot.new "#{@location}/build_root.tar.gz"
     end
 
     def get_package(name)
@@ -209,72 +189,6 @@ EOF"
         p "Would remove!"
         #FileUtils.rm_rf "#{location}/packages/#{pkg_name}"
       end
-    end
-
-    def buildroot
-      Dir.mktmpdir do |tmp|
-        puts "Setting up the build-root ..."
-        Kernel.system "sudo tar xz -C #{tmp} -f #{@br_archive}"
-        begin
-          yield tmp
-        ensure
-          Kernel.system "sudo rm -rf #{tmp}/*"
-        end
-      end
-    end
-
-    private
-    def generate_gpg_key(name, email, pass)
-      #kill_rngd = false
-      #unless File.exists? "/var/run/rngd.pid"
-      #  print "Starting rngd (root permissions required) ... "
-      #  Kernel.system "sudo rngd -p #{@location}/rngd.pid -r /dev/urandom"
-      #  kill_rngd = true
-      #  puts "[OK]"
-      #end
-
-      FileUtils.mkdir_p "#{@location}/gnupg-keyring"
-      FileUtils.chmod_R 0700, "#{@location}/gnupg-keyring"
-
-      print "Generating the GPG key ... "
-      passphrase = "Passphrase: #{pass}" if pass.length > 0
-      gpg_cmd = <<-END
-        gpg --batch --gen-key --homedir #{@location}/gnupg-keyring/ <<EOF
-        Key-Type: RSA
-        Key-Length: 2048
-        Subkey-Type: ELG-E
-        Subkey-Length: 2048
-        Name-Real: #{name}
-        Name-Email: #{email}
-        #{passphrase}
-        Expire-Date: 0
-        %commit
-EOF
-      END
-
-      Kernel.system gpg_cmd
-
-      key_list = `gpg --list-keys --with-colons --homedir #{@location}/gnupg-keyring`.split "\n"
-      key_entry = key_list.grep(/^pub/).grep(/#{name}/).grep(/#{email}/)
-      key = key_entry[0].split(":")[4][8..-1]
-      puts "[OK]"
-
-      #if kill_rngd
-      #  print "Stopping rngd (root permissions required) ... "
-      #  Kernel.system "sudo kill `cat #{@location}/rngd.pid`"
-      #  Kernel.system "sudo rm -f #{@location}/rngd.pid"
-      #  puts "[OK]"
-      #end
-
-      key
-    end
-
-    def export_gpg_pub_key(key)
-      print "Exporting GPG key ... "
-      `gpg --armor --homedir #{@location}/gnupg-keyring \
-       --output #{@location}/archive/repo.gpg.key \
-       --export #{key}`
-      puts "[OK]"
     end
   end
 end
