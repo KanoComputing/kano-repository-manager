@@ -32,6 +32,13 @@ module Mkpkg
       Open3.popen2e(@cmd) do |stdin, stdouterr, wait_thr|
         pid = wait_thr.pid
 
+        begin
+          stdouterr.fsync = true
+          stdouterr.sync = true
+        rescue
+          a = 1 # FIXME
+        end
+
         while line = stdouterr.gets
           @out += line
           if @show_out

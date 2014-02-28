@@ -6,10 +6,12 @@ module Mkpkg
   class GitPackage < Package
     def self.setup(repo, git_addr, default_branch, force=false)
       Dir.mktmpdir do |tmp|
-        `git clone --branch #{default_branch} #{git_addr} #{tmp}/git`
+        git_cmd = "git clone --branch #{default_branch} #{git_addr} #{tmp}/git"
+        ShellCmd.new git_cmd, :tag => "git", :show_out => true
 
         unless File.exists? "#{tmp}/git/debian/control"
-          raise "The debian packaging files were not found in the repository."
+          log :err, "The debian packaging files not found in the repository"
+          raise "Adding a package from #{git_addr} failed"
         end
 
         src_name = nil
@@ -24,19 +26,26 @@ module Mkpkg
         end
 
         unless src_name
-          raise "Couldn't identify the source package. " +
-                "Is your control file well formed?"
+          log :err, "Couldn't identify the source package"
+          raise "Adding a package from #{git_addr} failed"
         end
 
         pkg_dir = "#{repo.location}/packages/#{src_name}"
         if File.exists? pkg_dir
-          raise "The package already exists. Add -f to insert it anyway."
+          log :warn, "The package already exists. Add -f to insert it anyway."
+          raise "Adding failed"
         end
 
+        log :info, "Adding #{src_name.fg "blue"} to the repository"
         FileUtils.mkdir_p "#{pkg_dir}"
+
+        log :info, "Setting up builds directory"
         FileUtils.mkdir_p "#{pkg_dir}/builds"
 
+        log :info, "Setting up the source directory"
         FileUtils.mv "#{tmp}/git/.git", "#{pkg_dir}/source"
+
+        log :info, "Package #{src_name} added successfully"
       end
     end
 
@@ -57,20 +66,21 @@ module Mkpkg
       version = nil
       orig_rev, curr_rev = update_from_origin branch
       if curr_rev != orig_rev || force
-        @repo.buildroot.open do |br|
-          src_dir = "#{br}/source"
-          FileUtils.mkdir_p src_dir
-
-          puts "Extracting sources ..."
-          Kernel.system "git --git-dir #{@git_dir} archive " +
-                        "--format tar #{branch} | tar x -C #{src_dir}"
+        Dir.mktmpdir do |src_dir|
+          log :info, "Extracting the sources"
+          git_cmd ="git --git-dir #{@git_dir} archive " +
+                   "--format tar #{branch} | tar x -C #{src_dir}"
+          ShellCmd.new git_cmd, :tag => "git", :show_out => true
 
           version = PkgVersion.new get_version "#{src_dir}/debian/changelog"
+          log :info, "Source version: #{version}"
 
           while build_exists? version
             version.increment!
           end
+          log :info, "Building version: #{version}"
 
+          log :info, "Updating changelog"
           now = Time.new.strftime("%a, %-d %b %Y %T %z")
           ch_entry = "#{@name} (#{version}) kano; urgency=low\n"
           ch_entry << "\n"
@@ -88,34 +98,78 @@ module Mkpkg
             f.write changelog
           end
 
-          Kernel.system <<-EOS
-sudo chroot "#{br}" <<EOF
-apt-get update
+          repo_arches = @repo.get_architectures
+          pkg_arches = get_architectures("#{src_dir}/debian/control")
+          arches = case
+          when pkg_arches.include?("any") || pkg_arches.include?("all")
+            repo_arches
+          else
+            repo_arches & pkg_arches
+          end
+          arches.each do |arch|
+            @repo.buildroot(arch).open do |br|
+              log :info, "Building the #{@name.fg("blue")} package " +
+                         "v#{version} for #{arch}"
+              # Moving to the proper directory
+              build_dir_name = "#{@name}-#{version.upstream}"
+              build_dir = "#{br}/#{build_dir_name}"
+              FileUtils.cp_r src_dir, build_dir
 
-dpkg-source -b "/source"
+              # Make orig tarball
+              log :info, "Creating orig source tarball"
+              tar = "tar cz -C #{build_dir} --exclude=debian " +
+                    "-f #{br}/#{@name}_#{version.upstream}.orig.tar.gz " +
+                    "`ls -1 #{build_dir}`"
+              ShellCmd.new tar, :tag => "tar"
 
+              apt = "sudo chroot #{br} apt-get update"
+              deps = <<-EOS
+sudo chroot #{br} <<EOF
+dpkg-source -b "/#{build_dir_name}"
 mk-build-deps *.dsc -i -t "apt-get --no-install-recommends -y"
 rm -rf #{@name}-build-deps_*
-
-cd /source
+EOF
+EOS
+          build = <<-EOS
+sudo chroot #{br} <<EOF
+cd /#{build_dir_name}
 debuild -i -uc -us -b
 EOF
 EOS
 
-          expected_pkgs = get_subpackage_names "#{src_dir}/debian/control", version
-          p expected_pkgs
-          expected_pkgs.each do |pkg|
-            unless File.exists? "#{br}/#{pkg}"
-              raise "Build failed, '#{pkg}' package not build."
+              log :info, "Updating the sources lists"
+              ShellCmd.new apt, :tag => "apt-get", :show_out => true
+
+              log :info, "Installing build dependencies"
+              ShellCmd.new deps, :tag => "mk-build-deps", :show_out => true
+
+              log :info, "Building the package"
+              ShellCmd.new build, :tag => "debuild", :show_out => true
+
+              debs = Dir["#{br}/*.deb"]
+              expected_pkgs = get_subpackage_names "#{src_dir}/debian/control"
+              expected_pkgs.each do |subpkg_name|
+                includes = debs.inject(false) do |r, n|
+                  r || ((/^#{br}\/#{subpkg_name}_#{version}/ =~ n) != nil)
+                end
+
+                unless includes
+                  log :err, "Subpackage #{subpkg_name} did not build properly"
+                  raise "Building #{name} failed"
+                end
+              end
+
+              build_dir = "#{@repo.location}/packages/#{@name}/builds/#{version}"
+              FileUtils.mkdir_p build_dir
+              debs.each do |pkg|
+                FileUtils.cp pkg, build_dir
+              end
             end
           end
-
-          build_dir = "#{@repo.location}/packages/#{@name}/builds/#{version}"
-          FileUtils.mkdir_p build_dir
-          expected_pkgs.each do |pkg|
-            FileUtils.cp "#{br}/#{pkg}", build_dir
-          end
         end
+      else
+        log :info, "There were no changes in the #{pkg.name.fg("blue")} package"
+        log :info, "Build stopped (add -f to build anyway)"
       end
       version
     end
@@ -126,17 +180,30 @@ EOS
 
     private
     def update_from_origin(branch)
-      original_rev = `git --git-dir #{@git_dir} rev-parse #{branch} 2>/dev/null`.chomp
+      log :info, "Pulling changes from origin"
+
+      git_cmd = "git --git-dir #{@git_dir} rev-parse #{branch} 2>/dev/null"
+      git = ShellCmd.new git_cmd, :tag => "git"
+
+      original_rev = git.out.chomp
       original_rev = nil if original_rev == branch
 
-      rv = if @default_branch == branch
-        Kernel.system "git --git-dir #{@git_dir} pull origin #{branch}"
-      else
-        Kernel.system "git --git-dir #{@git_dir} fetch origin #{branch}:#{branch}"
+      begin
+        if @default_branch == branch
+          git_cmd = "git --git-dir #{@git_dir} pull origin #{branch}"
+          ShellCmd.new git_cmd, :tag => "git", :show_out => true
+        else
+          git_cmd = "git --git-dir #{@git_dir} fetch origin #{branch}:#{branch}"
+          ShellCmd.new git_cmd, :tag => "git", :show_out => true
+        end
+      rescue Exception => e
+        log :err, "Unable to pull from origin"
+        raise e
       end
-      raise "Unable to pull from origin." unless rv
 
-      current_rev = `git --git-dir #{@git_dir} rev-parse #{branch}`.chomp
+      git_cmd = "git --git-dir #{@git_dir} rev-parse #{branch} 2>/dev/null"
+      git = ShellCmd.new git_cmd, :tag => "git"
+      current_rev = git.out.chomp
 
       [original_rev, current_rev]
     end
@@ -152,23 +219,29 @@ EOS
       nil
     end
 
-    def get_subpackage_names(control_file, version)
+    def get_subpackage_names(control_file)
       packages = []
       File.open control_file, "r" do |f|
-        current_pkg = nil
         f.each_line do |l|
           if /^Package: / =~ l
-            current_pkg = l.split(" ")[1]
-          end
-          if /^Architecture: / =~ l
-            arches = l.split(/\s+/)[1..-1].each do |arch|
-              packages.push "#{current_pkg}_#{version}_#{arch}.deb"
-            end
+            packages.push l.split(" ")[1]
           end
         end
       end
 
       packages
+    end
+
+    def get_architectures(control_file)
+      arches = []
+      File.open control_file, "r" do |f|
+        f.each_line do |l|
+          m = l.match /^Architecture: (.+)/
+          arches += m.captures[0].chomp.split(" ") if m
+        end
+      end
+
+      arches.uniq
     end
   end
 end

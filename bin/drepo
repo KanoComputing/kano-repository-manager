@@ -25,6 +25,21 @@ class ExtendedThor < Thor
   end
 end
 
+class Archive < ExtendedThor
+  #desc "save TAG", "make a snapshot of the current archive"
+  #def save(tag)
+  #end
+
+  #desc "restore TAG", "replace the current archive with an earlier snapshot"
+  #def restore(tag)
+  #end
+
+  #desc "list-versions", "show all snapshots"
+  #map  "list-versions" => :list_versions
+  #def list_versions
+  #end
+end
+
 class List < ExtendedThor
   desc "packages", "show a list of source packages in the repo"
   def packages()
@@ -36,7 +51,7 @@ class List < ExtendedThor
     end
   end
 
-  desc "versions PACKAGE", "show a history of all available package versions"
+  desc "versions PACKAGE", "show the history of all available versions for a package"
   def versions(pkg_name)
     repo = get_repo_handle
     log :info, "Listing all built versions of '#{pkg_name}'"
@@ -48,8 +63,16 @@ class List < ExtendedThor
       line = "#{version}"
       suites.each do |suite, codename|
         codename = suite if codename == nil
-        if repo.query_for_version(suite, pkg.name) == version
-          line << " [#{codename}]"
+        if pkg.build_exists? version
+          debs = repo.get_build pkg.name, version
+          subpkgs = debs.map { |p| subpkg = File.basename(p).split("_")[0] }
+
+          all_included = true
+          subpkgs.each do |subpkg|
+            all_included = false unless repo.query_for_version(suite, subpkg) == version
+          end
+
+          line << " [#{codename}]" if all_included
         end
       end
       log :info, "  #{line}"
@@ -58,7 +81,7 @@ class List < ExtendedThor
 end
 
 class RepoCLI < ExtendedThor
-  class_option :repo, :type => :string
+  class_option :repo, :type => :string, :aliases => "-r"
 
   desc "init [LOCATION]", "setup a whole new repository from scratch"
   def init(location=".")
@@ -204,6 +227,32 @@ class RepoCLI < ExtendedThor
   def remove(pkg_name)
     repo = get_repo_handle
     repo.remove pkg_name, options["force"] == true
+  end
+
+  desc "unpush [pkg-name] [suite]", "remove a built package from a suite"
+  def unpush(pkg_name, suite)
+    repo = get_repo_handle
+    repo.unpush pkg_name, suite
+  end
+
+  desc "release", "push all the packages from testing to release"
+  def release
+    repo = get_repo_handle
+
+    log :info, "Releasing all packages from testing"
+    repo.list_packages.each do |pkg|
+      repo.push pkg.name, nil, "stable"
+    end
+  end
+
+  desc "snapshot", "save a snapshot of the archive"
+  def snapshot(tag)
+    repo = get_repo_handle
+
+    log :info, "Releasing all packages from testing"
+    repo.list_packages.each do |pkg|
+      repo.push pkg.name, nil, "stable"
+    end
   end
 end
 

@@ -1,6 +1,13 @@
+require "mkpkg/logger"
+
 module Mkpkg
   class Package
     attr_reader :name
+
+    include Logger
+    class << self
+      include Logger
+    end
 
     def initialize(name, repo)
       @name = name

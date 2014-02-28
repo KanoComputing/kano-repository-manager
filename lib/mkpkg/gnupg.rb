@@ -38,8 +38,8 @@ module Mkpkg
         %commit
 EOF
 END
+      # TODO: Add timeout to this one
       gpg_cmd = ShellCmd.new cmd, :tag => "gpg"
-
 
       cmd = "gpg --list-keys --with-colons --homedir #{@keyring}"
       gpg_cmd = ShellCmd.new cmd, :tag => "gpg"

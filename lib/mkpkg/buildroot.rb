@@ -7,7 +7,7 @@ module Mkpkg
   class BuildRoot
     include Logger
 
-    def initialize(br_archive=nil)
+    def initialize(arch, br_archive=nil)
       @location = br_archive
 
       @extra_pkgs = "sudo,vim,ca-certificates,fakeroot,build-essential," +
@@ -21,18 +21,19 @@ module Mkpkg
 
     def open
       Dir.mktmpdir do |tmp|
-        puts "Preparing the build-root ..."
-        Kernel.system "sudo tar xz -C #{tmp} -f #{@location}"
+        log :info, "Preparing the build root"
+        ShellCmd.new "sudo tar xz -C #{tmp} -f #{@location}", :tag => "tar"
         begin
           yield tmp
         ensure
-          Kernel.system "sudo rm -rf #{tmp}/*"
+          log :info, "Cleaning up the buildroot"
+          ShellCmd.new "sudo rm -rf #{tmp}/*", :tag => "rm"
         end
       end
     end
 
     private
-    def setup
+    def setup(arch)
       Dir.mktmpdir do |tmp|
         broot = "#{tmp}/broot"
         FileUtils.mkdir_p "#{tmp}/broot"
@@ -43,18 +44,20 @@ module Mkpkg
           log :info, "Bootstrapping Raspian (first stage)"
 
           cmd = "sudo debootstrap --foreign --variant=buildd --no-check-gpg " +
-                "--include=#{@extra_pkgs} --arch=armhf wheezy #{broot} #{@repo}"
+                "--include=#{@extra_pkgs} --arch=#{arch} wheezy #{broot} #{@repo}"
           debootsrap = ShellCmd.new cmd, {
             :tag => "debootstrap",
             :show_out => true
           }
 
-          which = ShellCmd.new "which qemu-arm-static", :tag => "which"
-          cp = ShellCmd.new "sudo cp #{which.out.chomp} #{broot}/usr/bin", {
-            :tag => "cp"
-          }
+          static_qemu = Dir["/usr/bin/qemu-*-static"]
+          static_qemu.each do |path|
+            cp = ShellCmd.new "sudo cp #{path} #{broot}/usr/bin", {
+              :tag => "cp"
+            }
+          end
 
-          log :info, "Bootstrapping Raspian (ARM stage)"
+          log :info, "Bootstrapping Raspian (#{arch} stage)"
           cmd = "sudo chroot #{broot} /debootstrap/debootstrap --second-stage"
           debootstrap = ShellCmd.new cmd, {
             :tag => "debootstrap",

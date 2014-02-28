@@ -17,14 +17,14 @@ tco_conf.styles["info"] = {
   :underline => false
 }
 tco_conf.styles["warn"] = {
-  :fg => "yellow",
-  :bg => "dark-grey",
+  :fg => "dark-grey",
+  :bg => "yellow",
   :bright => false,
   :underline => false
 }
 tco_conf.styles["err"] = {
-  :fg => "red",
-  :bg => "dark-grey",
+  :fg => "dark-grey",
+  :bg => "red",
   :bright => false,
   :underline => false
 }
