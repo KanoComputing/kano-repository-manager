@@ -1,9 +1,9 @@
 require "tco"
 
-require "mkpkg/logger"
-require "mkpkg/shellcmd"
+require "dr/logger"
+require "dr/shellcmd"
 
-module Mkpkg
+module Dr
   class BuildRoot
     include Logger
 

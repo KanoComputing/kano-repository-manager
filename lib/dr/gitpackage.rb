@@ -1,8 +1,8 @@
-require "mkpkg/package"
-require "mkpkg/pkgversion"
-require "mkpkg/shellcmd"
+require "dr/package"
+require "dr/pkgversion"
+require "dr/shellcmd"
 
-module Mkpkg
+module Dr
   class GitPackage < Package
     def self.setup(repo, git_addr, default_branch, force=false)
       Dir.mktmpdir do |tmp|

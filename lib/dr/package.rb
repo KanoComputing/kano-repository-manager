@@ -1,6 +1,6 @@
-require "mkpkg/logger"
+require "dr/logger"
 
-module Mkpkg
+module Dr
   class Package
     attr_reader :name
 

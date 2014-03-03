@@ -1,4 +1,4 @@
-module Mkpkg
+module Dr
   class PkgVersion
     attr_accessor :upstream, :debian, :date, :build
 

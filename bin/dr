@@ -4,31 +4,31 @@ require "thor"
 require "fileutils"
 require "io/console"
 
-require "mkpkg/repo"
-require "mkpkg/gitpackage"
-require "mkpkg/debpackage"
+require "dr/repo"
+require "dr/gitpackage"
+require "dr/debpackage"
 
-require "mkpkg/shellcmd"
-require "mkpkg/logger"
-require "mkpkg/config"
+require "dr/shellcmd"
+require "dr/logger"
+require "dr/config"
 
 class ExtendedThor < Thor
   private
-  include Mkpkg::Logger
+  include Dr::Logger
 
   def get_repo_handle
     if @conf == nil
-      @conf = Mkpkg::Config.new ["/etc/drepo.conf", "~/.drepo.conf"]
+      @conf = Dr::Config.new ["/etc/drepo.conf", "~/.drepo.conf"]
     end
 
     if options.has_key? "repo"
-      Mkpkg::Repo.new options["repo"]
+      Dr::Repo.new options["repo"]
     else
       if @conf.default_repo != nil
-        Mkpkg::Repo.new @conf.repositories[@conf.default_repo][:location]
+        Dr::Repo.new @conf.repositories[@conf.default_repo][:location]
       else
         log :warn, "No repo was specified, using '#{Dir.pwd}'."
-        Mkpkg::Repo.new Dir.pwd
+        Dr::Repo.new Dir.pwd
       end
     end
   end
@@ -140,7 +140,7 @@ class RepoCLI < ExtendedThor
       repo_conf[:codenames].push codename
     end
 
-    r = Mkpkg::Repo.new location
+    r = Dr::Repo.new location
     r.setup repo_conf
   end
 
@@ -161,9 +161,9 @@ class RepoCLI < ExtendedThor
       branch = "master"
       branch = options["branch"] if options.has_key? "branch"
 
-      Mkpkg::GitPackage::setup repo, options["git"], branch
+      Dr::GitPackage::setup repo, options["git"], branch
     when options.has_key?("deb")
-      Mkpkg::DebPackage::setup repo, options["deb"]
+      Dr::DebPackage::setup repo, options["deb"]
     else
       raise ArgumentError, "Either --git or --deb must be specified"
     end
@@ -272,5 +272,5 @@ end
 #begin
   RepoCLI.start ARGV
 #rescue Exception => e
-#  Mkpkg::Logger.log :err, e.to_s
+#  Dr::Logger.log :err, e.to_s
 #end

@@ -1,7 +1,7 @@
-require "mkpkg/shellcmd"
-require "mkpkg/logger"
+require "dr/shellcmd"
+require "dr/logger"
 
-module Mkpkg
+module Dr
   class GnuPG
     include Logger
 

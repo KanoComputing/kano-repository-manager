@@ -1,20 +1,18 @@
 # coding: utf-8
 lib = File.expand_path('../lib', __FILE__)
 $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
-require 'mkpkg/version'
+require 'dr/version'
 
 Gem::Specification.new do |spec|
-  spec.name          = "mkpkg"
-  spec.version       = Mkpkg::VERSION
+  spec.name          = "dr"
+  spec.version       = Dr::VERSION
   spec.authors       = ["Radek Pazdera"]
   spec.email         = ["radek@kano.me"]
-  spec.summary       = %q{mkpkg is a packaging tool that helps you make,
+  spec.summary       = %q{dr is a packaging tool that helps you make,
                           distribute and maintain you own disto packages.}
   spec.description   = %q{This tool works with distribution-level packaging
-                          systems (the only one supported at this point is
-                          the Debian one) and helps you to create, maintain,
-                          and distribute your own packages through your
-                          own repositories.}
+                          tools and helps you make and distribute your own
+                          Debian packages through your own repository.}
   spec.homepage      = "http://github.com/KanoComputing/kano-package-system"
   spec.license       = "GPLv2"
 

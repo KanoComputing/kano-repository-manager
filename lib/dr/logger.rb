@@ -45,7 +45,7 @@ tco_conf.styles["log-head"] = {
 
 Tco::reconfigure tco_conf
 
-module Mkpkg
+module Dr
   module Logger
     @@logger_options = {
       :info => "info",
@@ -55,7 +55,7 @@ module Mkpkg
     }
 
     def self.log(level, msg)
-      out = "drepo".style("log-head") << " "
+      out = "dr".style("log-head") << " "
 
       case level
       when :info  then out << "info".style(@@logger_options[:info])

@@ -1,6 +1,6 @@
-require "mkpkg/package"
+require "dr/package"
 
-module Mkpkg
+module Dr
   class DebPackage < Package
     def self.setup(repo, deb_file)
       puts "Adding the #{File.basename deb_file} package ..."

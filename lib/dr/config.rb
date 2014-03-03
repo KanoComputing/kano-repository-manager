@@ -1,6 +1,6 @@
 require "yaml"
 
-module Mkpkg
+module Dr
   class Config
     attr_reader :default_repo, :repositories
 

@@ -1,14 +1,14 @@
-require "mkpkg/gitpackage"
-require "mkpkg/debpackage"
+require "dr/gitpackage"
+require "dr/debpackage"
 
-require "mkpkg/shellcmd"
-require "mkpkg/logger"
-require "mkpkg/gnupg"
-require "mkpkg/buildroot"
+require "dr/shellcmd"
+require "dr/logger"
+require "dr/gnupg"
+require "dr/buildroot"
 
 require "fileutils"
 
-module Mkpkg
+module Dr
   class Repo
     include Logger
 

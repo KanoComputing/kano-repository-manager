@@ -1,9 +1,9 @@
 require "open3"
 require "tco"
 
-require "mkpkg/logger"
+require "dr/logger"
 
-module Mkpkg
+module Dr
   class ShellCmd
     attr_reader :status, :out, :err
 
