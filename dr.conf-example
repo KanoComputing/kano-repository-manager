@@ -1,0 +1,11 @@
+default_repo: "production"
+
+repositories:
+  - name: "production"
+    location: "/path/to/the/production/repo"
+
+  - name: "backup"
+    location: "/path/to/the/backup/repo"
+
+  - name: "sandbox"
+    location: "/path/to/the/sandbox/repo"
