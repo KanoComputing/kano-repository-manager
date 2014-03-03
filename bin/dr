@@ -18,7 +18,7 @@ class ExtendedThor < Thor
 
   def get_repo_handle
     if @conf == nil
-      @conf = Dr::Config.new ["/etc/drepo.conf", "~/.drepo.conf"]
+      @conf = Dr::Config.new ["/etc/dr.conf", "~/.dr.conf"]
     end
 
     if options.has_key? "repo"
