@@ -10,17 +10,26 @@ require "mkpkg/debpackage"
 
 require "mkpkg/shellcmd"
 require "mkpkg/logger"
+require "mkpkg/config"
 
 class ExtendedThor < Thor
   private
   include Mkpkg::Logger
 
   def get_repo_handle
+    if @conf == nil
+      @conf = Mkpkg::Config.new ["/etc/drepo.conf", "~/.drepo.conf"]
+    end
+
     if options.has_key? "repo"
       Mkpkg::Repo.new options["repo"]
     else
-      log :warn, "No repo was specified, using '#{Dir.pwd}'."
-      Mkpkg::Repo.new Dir.pwd
+      if @conf.default_repo != nil
+        Mkpkg::Repo.new @conf.repositories[@conf.default_repo][:location]
+      else
+        log :warn, "No repo was specified, using '#{Dir.pwd}'."
+        Mkpkg::Repo.new Dir.pwd
+      end
     end
   end
 end
@@ -69,7 +78,9 @@ class List < ExtendedThor
 
           all_included = true
           subpkgs.each do |subpkg|
-            all_included = false unless repo.query_for_version(suite, subpkg) == version
+            unless repo.query_for_deb_version(suite, subpkg) == version
+              all_included = false
+            end
           end
 
           line << " [#{codename}]" if all_included
@@ -221,18 +232,20 @@ class RepoCLI < ExtendedThor
   desc "list SUBCOMMAND [ARGS]", "show information about packages"
   subcommand "list", List
 
-  desc "remove [pkg-name]", "remove a package completely from the build system"
+  desc "rm [pkg-name]", "remove a package completely from the build system"
   method_option :force, :aliases => "-f", :type => :boolean,
                 :desc => "force removal even if the package is still used"
-  def remove(pkg_name)
+  def rm(pkg_name)
     repo = get_repo_handle
     repo.remove pkg_name, options["force"] == true
   end
 
-  desc "unpush [pkg-name] [suite]", "remove a built package from a suite"
-  def unpush(pkg_name, suite)
+  desc "rmbuild [pkg-name] [version]", "remove a built version of a package"
+  method_option :force, :aliases => "-f", :type => :boolean,
+                :desc => "force removal even if the build is still used"
+  def rmbuild(pkg_name, version)
     repo = get_repo_handle
-    repo.unpush pkg_name, suite
+    repo.remove_build pkg_name, version, options["force"] == true
   end
 
   desc "release", "push all the packages from testing to release"
