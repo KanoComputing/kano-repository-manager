@@ -8,8 +8,10 @@ Gem::Specification.new do |spec|
   spec.version       = Dr::VERSION
   spec.authors       = ["Radek Pazdera"]
   spec.email         = ["radek@kano.me"]
-  spec.summary       = %q{dr is a packaging tool that helps you make,
-                          distribute and maintain you own disto packages.}
+  spec.summary       = %q{dr stands for debian-repository. It is a packaging
+                          tool that helps you make, distribute and maintain
+                          you own disto packages and repositories. It's in a
+                          very early stage, NOT READY for production.}
   spec.description   = %q{This tool works with distribution-level packaging
                           tools and helps you make and distribute your own
                           Debian packages through your own repository.}
