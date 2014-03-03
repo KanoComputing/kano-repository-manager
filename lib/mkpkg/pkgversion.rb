@@ -28,7 +28,6 @@ module Mkpkg
     end
 
     def increment!
-      today = Time.now.strftime "%Y%m%d"
       if @date == today
         @build += 1
       else
@@ -45,17 +44,26 @@ module Mkpkg
 
     def to_s
       v = @upstream.clone
-      v << "-#{@debian}" if @debian
-      if @date
-        v << ".#{@date}"
-        v << "build#{@build}" if @build > 0
+      if @debian
+        v << "-#{@debian}"
       else
-        if @build > 0
-          v << "#{@build}"
-        end
+        v << "-0"
       end
 
+      if @date
+        v << ".#{@date}"
+      else
+        v << ".#{today}"
+      end
+
+      v << "build#{@build}" if @build > 0
+
       v
+    end
+
+    private
+    def today
+      Time.now.strftime "%Y%m%d"
     end
   end
 end

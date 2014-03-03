@@ -178,6 +178,11 @@ EOS
       File.directory? "#{@repo.location}/packages/#{@name}/builds/#{version}"
     end
 
+    def remove_build(version)
+      raise "Build #{version.fg("blue")} not found" unless build_exists? version
+      FileUtils.rm_rf "#{@repo.location}/packages/#{@name}/builds/#{version}"
+    end
+
     private
     def update_from_origin(branch)
       log :info, "Pulling changes from origin"

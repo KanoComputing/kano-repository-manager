@@ -131,14 +131,34 @@ module Mkpkg
       arches.uniq
     end
 
-    def query_for_version(suite, pkg_name)
-      reprepro = "reprepro --basedir #{location}/archive " +
-                 "--list-format '${version}' list #{suite} " +
-                 "#{pkg_name} 2>/dev/null"
-      reprepro_cmd = ShellCmd.new reprepro, :tag => "reprepro"
-      v = reprepro_cmd.out.chomp
+    def query_for_deb_version(suite, pkg_name)
+      reprepro_cmd = "reprepro --basedir #{location}/archive " +
+                     "--list-format '${version}' list #{suite} " +
+                     "#{pkg_name} 2>/dev/null"
+      reprepro = ShellCmd.new reprepro_cmd, :tag => "reprepro"
+      v = reprepro.out.chomp
       v = nil unless v.length > 0
       v
+    end
+
+    def get_subpackage_versions(pkg_name)
+      pkg = get_package pkg_name
+      suites = get_suites
+
+      versions = {}
+      suites.each do |suite, codename|
+        versions[suite] = {}
+        reprepro_cmd = "reprepro --basedir #{location}/archive " +
+                     "--list-format '${package} ${version}\n' " +
+                     "listfilter #{suite} 'Source (== raspberrypi-firmware)' " +
+                     "2>/dev/null"
+        reprepro = ShellCmd.new reprepro_cmd, :tag => "reprepro"
+        reprepro.out.chomp.each_line do |line|
+          subpkg, version = line.split(" ").map(&:chomp)
+          versions[suite][subpkg] = version
+        end
+      end
+      versions
     end
 
     def push(pkg_name, version, suite, force=false)
@@ -166,7 +186,9 @@ module Mkpkg
         suite = "testing"
       end
 
-      current_version = query_for_version suite, pkg.name
+      # FIXME: This will not work with packages that don't build a deb
+      #        with the same name as the source package
+      current_version = query_for_deb_version suite, pkg.name
 
       if current_version != nil && current_version >= version
         log :warn, "Version #{version.fg("blue")} already available in #{suite}"
@@ -209,10 +231,7 @@ module Mkpkg
     def remove(pkg_name, force=false)
       pkg = get_package pkg_name
 
-      versions = get_suites.map { |n, cn| query_for_version n, pkg_name }
-      is_used = versions.inject(false) { |r, v| v != nil ? true : r }
-
-      if is_used
+      if is_used? pkg_name
         log :warn, "Package #{pkg_name} is still used"
         raise "The '#{pkg_name}' package is still used." unless force
 
@@ -223,10 +242,34 @@ module Mkpkg
         end
       end
 
-      if !is_used || force
+      if !is_used?(pkg_name) || force
         log :info, "Removing #{pkg_name} from the repository"
         FileUtils.rm_rf "#{location}/packages/#{pkg_name}"
       end
+    end
+
+    def remove_build(pkg_name, version, force=false)
+      pkg = get_package pkg_name
+
+      if is_used?(pkg_name, version)
+        if force
+          log :info, "Force-removing #{version.fg("blue")} version of " +
+                     "#{pkg_name.fg("blue")}"
+          versions_by_suite = get_subpackage_versions pkg_name
+          versions_by_suite.each do |suite, versions|
+            unpush pkg_name, suite if versions.has_value? version
+          end
+        else
+          log :warn, "This build of #{pkg_name} is " +
+                     "still being used, add -f to force-remove"
+          return
+        end
+      else
+        log :info, "Removing the #{version.fg("blue")} version of " +
+                    "#{pkg_name.fg("blue")}"
+      end
+
+      pkg.remove_build version
     end
 
     def get_build(pkg_name, version=nil)
@@ -239,6 +282,19 @@ module Mkpkg
       raise "Build #{version} doesn't exist" unless pkg.build_exists? version
 
       Dir["#{@location}/packages/#{pkg.name}/builds/#{version}/*"]
+    end
+
+    private
+    def is_used?(pkg_name, version=nil)
+      versions_by_suite = get_subpackage_versions pkg_name
+      versions_by_suite.inject(false) do |rslt, hash_pair|
+        suite, versions = hash_pair
+        if version == nil
+          rslt || !versions.empty?
+        else
+          rslt || versions.has_value?(version)
+        end
+      end
     end
   end
 end
