@@ -289,7 +289,25 @@ module Dr
       Dir["#{@location}/packages/#{pkg.name}/builds/#{version}/*"]
     end
 
+    def sign_deb(deb)
+      keyring = "#{@location}/gnupg-keyring"
+      gpg = GnuPG.new keyring
+      key_id = gpg.get_key_id get_key
+
+      cmd = "dpkg-sig -k '#{key_id}' -s builder -g '--homedir #{keyring}' #{deb}"
+      ShellCmd.new cmd, :tag => "dpkg-sig", :show_out => true
+    end
+
     private
+    def get_key
+      File.open "#{@location}/archive/conf/distributions", "r" do |f|
+        f.each_line do |line|
+          m = line.match /^SignWith: (.+)/
+          return m.captures[0] if m
+        end
+      end
+    end
+
     def is_used?(pkg_name, version=nil)
       versions_by_suite = get_subpackage_versions pkg_name
       versions_by_suite.inject(false) do |rslt, hash_pair|

@@ -23,6 +23,9 @@ module Dr
 
       log :info, "Adding a build to the #{src_name.fg "blue"} source package"
 
+      log :info, "Signing the deb file"
+      repo.sign_deb deb_file
+
       FileUtils.mkdir_p deb_dir
       FileUtils.cp "#{deb_file}", "#{deb_dir}/"
     end

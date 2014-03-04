@@ -59,7 +59,11 @@ END
       key
     end
 
-    def get_id
+    def get_key_id(key)
+      cmd = "gpg --homedir #{@keyring} --with-colons --list-public-keys #{key}"
+      gpg = ShellCmd.new cmd, :tag => "gpg"
+
+      gpg.out.lines.grep(/^pub/)[0].split(":")[9]
     end
 
     def export_pub(key, location)

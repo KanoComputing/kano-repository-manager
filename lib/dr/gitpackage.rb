@@ -162,6 +162,8 @@ EOS
               build_dir = "#{@repo.location}/packages/#{@name}/builds/#{version}"
               FileUtils.mkdir_p build_dir
               debs.each do |pkg|
+                log :info, "Signing the #{File.basename(pkg).fg("blue")} package"
+                @repo.sign_deb pkg
                 FileUtils.cp pkg, build_dir
               end
             end
