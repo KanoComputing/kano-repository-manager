@@ -46,7 +46,7 @@ module Dr
             f.puts "Codename: #{conf[:codenames][i]}"
           end
 
-          if conf[:name][i].length > 0
+          if conf[:name].length > 0
             f.puts "Origin: #{conf[:name]} - #{s}"
             f.puts "Label: #{conf[:name]} - #{s}"
           end

@@ -15,7 +15,7 @@ module Dr
       @repo = "http://mirrordirector.raspbian.org/raspbian/"
 
       if br_archive == nil || !File.exists?(br_archive)
-        setup
+        setup arch
       end
     end
 
