@@ -150,7 +150,7 @@ module Dr
         versions[suite] = {}
         reprepro_cmd = "reprepro --basedir #{location}/archive " +
                      "--list-format '${package} ${version}\n' " +
-                     "listfilter #{suite} 'Source (== raspberrypi-firmware)' " +
+                     "listfilter #{suite} 'Source (== #{pkg_name})' " +
                      "2>/dev/null"
         reprepro = ShellCmd.new reprepro_cmd, :tag => "reprepro"
         reprepro.out.chomp.each_line do |line|
@@ -170,7 +170,7 @@ module Dr
         end
       else
         if pkg.history.length == 0
-          log :err, "Package #{pkg_name} has not been built yet"
+          log :err, "No built packages available for #{pkg_name}"
           log :err, "Please, run a build first and the push."
           raise "Push failed"
         end
@@ -186,11 +186,19 @@ module Dr
         suite = "testing"
       end
 
-      # FIXME: This will not work with packages that don't build a deb
-      #        with the same name as the source package
-      current_version = query_for_deb_version suite, pkg.name
+      debs = Dir["#{@location}/packages/#{pkg.name}/builds/#{version}/*"]
+      names = debs.map { |deb| File.basename(deb).split("_")[0] }
 
-      if current_version != nil && current_version >= version
+      used_versions = get_subpackage_versions(pkg.name)[to_suite(suite)]
+
+      is_of_higher_version = true
+      names.each do |name|
+        if used_versions.has_key?(name) && version <= used_versions[name]
+          is_of_higher_version = false
+        end
+      end
+
+      unless is_of_higher_version
         log :warn, "Version #{version.fg("blue")} already available in #{suite}"
         if force
           reprepro = "reprepro -b #{@location}/archive " +
@@ -204,7 +212,6 @@ module Dr
       end
 
       log :info, "Pushing #{pkg_name} version #{version} to #{suite}"
-      debs = Dir["#{@location}/packages/#{pkg.name}/builds/#{version}/*"]
       reprepro = "reprepro -b #{@location}/archive " +
                  "--gnupghome #{location}/gnupg-keyring/ includedeb " +
                  "#{suite} #{debs.join " "}"
@@ -232,20 +239,18 @@ module Dr
       pkg = get_package pkg_name
 
       if is_used? pkg_name
-        log :warn, "Package #{pkg_name} is still used"
-        raise "The '#{pkg_name}' package is still used." unless force
+        log :warn, "The #{pkg_name.fg "blue"} package is still used"
+        raise "Operation canceled, add -f to remove anyway" unless force
 
         log :info, "Will be force-removed anyway"
-        get_suites.zip(versions).each do |suite, version|
-          log :info, "Removing #{pkg_name} v#{version} from #{suite}"
-          unpush pkg_name, suite[0] if version != nil
+        versions = get_subpackage_versions(pkg_name)
+        get_suites.each do |suite, codename|
+          unpush pkg_name, suite unless versions[suite].empty?
         end
       end
 
-      if !is_used?(pkg_name) || force
-        log :info, "Removing #{pkg_name} from the repository"
-        FileUtils.rm_rf "#{location}/packages/#{pkg_name}"
-      end
+      log :info, "Removing #{pkg_name} from the repository"
+      FileUtils.rm_rf "#{location}/packages/#{pkg_name}"
     end
 
     def remove_build(pkg_name, version, force=false)
@@ -295,6 +300,14 @@ module Dr
           rslt || versions.has_value?(version)
         end
       end
+    end
+
+    def to_suite(codename_or_suite)
+      get_suites.each do |suite, codename|
+        return suite if codename_or_suite == suite || codename_or_suite == codename
+      end
+
+      nil
     end
   end
 end

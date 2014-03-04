@@ -149,7 +149,7 @@ class RepoCLI < ExtendedThor
     :desc => "Add source package managed in a git repo"
   method_option :deb, :aliases => "-d",
     :desc => "Add a prebuilt binary deb package only"
-  method_option :force, :aliases => "-f",
+  method_option :force, :aliases => "-f", :type => :boolean,
     :desc => "Proceed even if the package already exists"
   method_option :branch, :aliases => "-b",
     :desc => "Set a default branch other than master (valid only with --git)"
@@ -163,18 +163,12 @@ class RepoCLI < ExtendedThor
 
       Dr::GitPackage::setup repo, options["git"], branch
     when options.has_key?("deb")
-      Dr::DebPackage::setup repo, options["deb"]
+      Dr::DebPackage::setup repo, options["deb"], options["force"]
     else
       raise ArgumentError, "Either --git or --deb must be specified"
     end
   end
 
-  # drepo build [pkg-name] --branch [topic-branch]
-  # drepo build [pkg-name] --branch [topic-branch] --push [suite] -f
-  #
-  #   - The old script basically
-  #   - Change versions to date stamps
-  #   - Add support for scratch suite builds
   desc "build [pkg-name]", "build a package from the sources"
   method_option :branch, :aliases => "-b", :type => :string,
                 :desc => "build from a different branch"
@@ -203,7 +197,6 @@ class RepoCLI < ExtendedThor
     end
   end
 
-  # drepo push [pkg-name] -f --suite X --version Y
   desc "push [pkg-name]", "push a built package to a specified suite"
   method_option :suite, :aliases => "-s", :type => :string,
                 :desc => "the target suite (defaults to testing)"

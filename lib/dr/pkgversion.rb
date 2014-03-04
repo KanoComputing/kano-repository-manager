@@ -38,8 +38,7 @@ module Dr
     end
 
     def ==(o)
-      @upstream == o.upstream && @debian == o.debian &&
-      @date == o.date && @build == o.build
+      self.to_s == o.to_s
     end
 
     def to_s

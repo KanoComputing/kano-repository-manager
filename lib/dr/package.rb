@@ -1,4 +1,5 @@
 require "dr/logger"
+require "dr/shellcmd"
 
 module Dr
   class Package
@@ -21,6 +22,15 @@ module Dr
       end
 
       versions.sort.reverse
+    end
+
+    def build_exists?(version)
+      File.directory? "#{@repo.location}/packages/#{@name}/builds/#{version}"
+    end
+
+    def remove_build(version)
+      raise "Build #{version.fg("blue")} not found" unless build_exists? version
+      FileUtils.rm_rf "#{@repo.location}/packages/#{@name}/builds/#{version}"
     end
   end
 end
