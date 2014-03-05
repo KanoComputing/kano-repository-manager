@@ -12,9 +12,11 @@ Gem::Specification.new do |spec|
                           tool that helps you make, distribute and maintain
                           you own disto packages and repositories. It's in a
                           very early stage, NOT READY for production.}
-  spec.description   = %q{This tool works with distribution-level packaging
+  spec.description   = %q{dr works with distribution-level packaging
                           tools and helps you make and distribute your own
-                          Debian packages through your own repository.}
+                          Debian packages through your own repository.
+                          This is a super early release, certainly NOT ready
+                          for production.}
   spec.homepage      = "http://github.com/KanoComputing/kano-package-system"
   spec.license       = "GPLv2"
 
