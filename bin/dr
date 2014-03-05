@@ -262,8 +262,8 @@ class RepoCLI < ExtendedThor
   end
 end
 
-#begin
+begin
   RepoCLI.start ARGV
-#rescue Exception => e
-#  Dr::Logger.log :err, e.to_s
-#end
+rescue Exception => e
+  Dr::Logger.log :err, e.to_s
+end
