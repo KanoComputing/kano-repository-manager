@@ -17,7 +17,7 @@ class ExtendedThor < Thor
   include Dr::Logger
 
   def get_repo_handle
-    if @conf == nil
+    unless @conf
       @conf = Dr::Config.new ["/etc/dr.conf", "~/.dr.conf"]
     end
 
