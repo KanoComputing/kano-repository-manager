@@ -1,4 +1,4 @@
-# Mkpkg
+# Debian Repository Management Tool
 
 TODO: Write a gem description
 
