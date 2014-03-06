@@ -223,6 +223,7 @@ class RepoCLI < ExtendedThor
   end
 
   desc "list SUBCOMMAND [ARGS]", "show information about packages"
+  map "ls" => :list
   subcommand "list", List
 
   desc "rm [pkg-name]", "remove a package completely from the build system"
