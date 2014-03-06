@@ -50,7 +50,7 @@ class Archive < ExtendedThor
 end
 
 class List < ExtendedThor
-  desc "packages", "show a list of source packages in the repo"
+  desc "packages", "Show a list of source packages in the repo"
   def packages()
     repo = get_repo_handle
     log :info, "Listing all source packages in the repository"
@@ -60,7 +60,7 @@ class List < ExtendedThor
     end
   end
 
-  desc "versions PACKAGE", "show the history of all available versions for a package"
+  desc "versions PACKAGE", "Show the history of all available versions for a package"
   def versions(pkg_name)
     repo = get_repo_handle
     log :info, "Listing all built versions of '#{pkg_name}'"
