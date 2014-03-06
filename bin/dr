@@ -101,10 +101,30 @@ class List < ExtendedThor
   end
 
   desc "suite SUITE", "Show the names and versions of packages in the suite"
-  def suite(suite_name)
+  def suite(suite)
     repo = get_repo_handle
 
     suites = repo.get_suites
+    exists = suites.inject(false) { |r, s| r || s.include?(suite) }
+    raise "Suite '#{suite}' doesn't exist" unless exists
+
+    log :info, "Listing all packages in #{suite.fg "blue"}"
+
+    suite = repo.codename_to_suite suite
+    suite_packages = repo.list_packages
+    suite_packages.each do |pkg|
+      versions = repo.get_subpackage_versions pkg.name
+      unless versions[suite].empty?
+        if versions[suite].length == 1 && versions[suite].has_key?(pkg.name)
+          log :info, "  #{pkg.name.fg "blue"}  #{versions[suite][pkg.name]}"
+        else
+          log :info, "  #{pkg.name.fg "blue"}"
+          versions[suite].each do |subpkg, version|
+            log :info, "    #{subpkg} #{version}"
+          end
+        end
+      end
+    end
   end
 end
 

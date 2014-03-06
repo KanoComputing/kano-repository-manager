@@ -71,17 +71,13 @@ module Dr
       end
     end
 
-    def list_packages(suite=nil)
+    def list_packages
       pkgs = []
-      if suite
-        a = 1
-      else
-        Dir.foreach @packages_dir do |pkg_name|
-          pkgs.push get_package pkg_name unless pkg_name =~ /^\./
-        end
+      Dir.foreach @packages_dir do |pkg_name|
+        pkgs.push get_package pkg_name unless pkg_name =~ /^\./
       end
 
-      pkgs
+      pkgs.sort
     end
 
     def buildroot(arch)
@@ -151,7 +147,8 @@ module Dr
         versions[suite] = {}
         reprepro_cmd = "reprepro --basedir #{location}/archive " +
                      "--list-format '${package} ${version}\n' " +
-                     "listfilter #{suite} 'Source (== #{pkg_name})' " +
+                     "listfilter #{suite} 'Source (== #{pkg_name}) | " +
+                     "Package (== #{pkg_name})' " +
                      "2>/dev/null"
         reprepro = ShellCmd.new reprepro_cmd, :tag => "reprepro"
         reprepro.out.chomp.each_line do |line|
@@ -190,7 +187,7 @@ module Dr
       debs = Dir["#{@location}/packages/#{pkg.name}/builds/#{version}/*"]
       names = debs.map { |deb| File.basename(deb).split("_")[0] }
 
-      used_versions = get_subpackage_versions(pkg.name)[to_suite(suite)]
+      used_versions = get_subpackage_versions(pkg.name)[codename_to_suite(suite)]
 
       is_of_higher_version = true
       names.each do |name|
@@ -311,6 +308,14 @@ module Dr
       ShellCmd.new cmd, :tag => "dpkg-sig", :show_out => true
     end
 
+    def codename_to_suite(codename_or_suite)
+      get_suites.each do |suite, codename|
+        return suite if codename_or_suite == suite || codename_or_suite == codename
+      end
+
+      nil
+    end
+
     private
     def get_key
       File.open "#{@location}/archive/conf/distributions", "r" do |f|
@@ -331,14 +336,6 @@ module Dr
           rslt || versions.has_value?(version)
         end
       end
-    end
-
-    def to_suite(codename_or_suite)
-      get_suites.each do |suite, codename|
-        return suite if codename_or_suite == suite || codename_or_suite == codename
-      end
-
-      nil
     end
   end
 end

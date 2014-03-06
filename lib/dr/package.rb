@@ -32,5 +32,9 @@ module Dr
       raise "Build #{version.fg("blue")} not found" unless build_exists? version
       FileUtils.rm_rf "#{@repo.location}/packages/#{@name}/builds/#{version}"
     end
+
+    def <=>(o)
+      self.name <=> o.name
+    end
   end
 end
