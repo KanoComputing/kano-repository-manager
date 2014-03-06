@@ -7,6 +7,7 @@ require "dr/gnupg"
 require "dr/buildroot"
 
 require "fileutils"
+require "yaml"
 
 module Dr
   class Repo
@@ -287,6 +288,18 @@ module Dr
       raise "Build #{version} doesn't exist" unless pkg.build_exists? version
 
       Dir["#{@location}/packages/#{pkg.name}/builds/#{version}/*"]
+    end
+
+    def get_build_metadata(pkg_name, version)
+      pkg = get_package pkg_name
+      raise "Build #{version} doesn't exist" unless pkg.build_exists? version
+
+      md_file = "#{@location}/packages/#{pkg.name}/builds/#{version}/.metadata"
+      if File.exists? md_file
+        YAML.load_file md_file
+      else
+        {}
+      end
     end
 
     def sign_deb(deb)

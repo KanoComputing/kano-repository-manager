@@ -70,24 +70,41 @@ class List < ExtendedThor
     pkg = repo.get_package pkg_name
     pkg.history.each do |version|
       line = "#{version}"
-      suites.each do |suite, codename|
-        codename = suite if codename == nil
-        if pkg.build_exists? version
-          debs = repo.get_build pkg.name, version
-          subpkgs = debs.map { |p| subpkg = File.basename(p).split("_")[0] }
 
-          all_included = true
-          subpkgs.each do |subpkg|
-            unless repo.query_for_deb_version(suite, subpkg) == version
-              all_included = false
+      if pkg.build_exists? version
+        debs = repo.get_build pkg.name, version
+
+        metadata = repo.get_build_metadata pkg.name, version
+        line << " {#{metadata["branch"].fg "blue"}}" if metadata.has_key? "branch"
+
+        subpkgs = debs.map { |p| subpkg = File.basename(p).split("_")[0] }
+      end
+
+      if subpkgs.length == 0
+        line << " [#{"broken".fg "red"}]"
+      else
+        suites.each do |suite, codename|
+          codename = suite if codename == nil
+
+            all_included = true
+            subpkgs.each do |subpkg|
+              unless repo.query_for_deb_version(suite, subpkg) == version
+                all_included = false
+              end
             end
-          end
 
-          line << " [#{codename}]" if all_included
+            line << " [#{codename}]" if all_included
         end
       end
       log :info, "  #{line}"
     end
+  end
+
+  desc "suite SUITE", "Show the names and versions of packages in the suite"
+  def suite(suite_name)
+    repo = get_repo_handle
+
+    suites = repo.get_suites
   end
 end
 
@@ -263,8 +280,8 @@ class RepoCLI < ExtendedThor
   end
 end
 
-begin
+#begin
   RepoCLI.start ARGV
-rescue Exception => e
-  Dr::Logger.log :err, e.to_s
-end
+#rescue Exception => e
+#  Dr::Logger.log :err, e.to_s
+#end

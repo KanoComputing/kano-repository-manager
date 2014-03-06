@@ -2,6 +2,8 @@ require "dr/package"
 require "dr/pkgversion"
 require "dr/shellcmd"
 
+require "yaml"
+
 module Dr
   class GitPackage < Package
     def self.setup(repo, git_addr, default_branch, force=false)
@@ -167,11 +169,16 @@ EOS
                 log :info, "Signing the #{File.basename(pkg).fg("blue")} package"
                 @repo.sign_deb "#{build_dir}/#{File.basename(pkg)}"
               end
+
+              log :info, "Writing package metadata"
+              File.open "#{build_dir}/.metadata", "w" do |f|
+                YAML.dump({"branch" => branch}, f)
+              end
             end
           end
         end
       else
-        log :info, "There were no changes in the #{pkg.name.fg("blue")} package"
+        log :info, "There were no changes in the #{@name.fg("blue")} package"
         log :info, "Build stopped (add -f to build anyway)"
       end
       version
