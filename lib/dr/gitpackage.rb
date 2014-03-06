@@ -179,7 +179,6 @@ EOS
         end
       else
         log :info, "There were no changes in the #{@name.fg("blue")} package"
-        log :info, "Build stopped (add -f to build anyway)"
       end
       version
     end

@@ -225,6 +225,11 @@ class RepoCLI < ExtendedThor
     pkg = repo.get_package pkg_name
     version = pkg.build branch, force
 
+    unless version
+      log :info, "Build stopped (add -f to build anyway)"
+      return
+    end
+
     if options["push"] && version
       if options["push"] == "push"
         repo.push pkg.name, version, "testing" # FIXME: should be configurable
@@ -279,7 +284,30 @@ class RepoCLI < ExtendedThor
     repo.remove_build pkg_name, version, options["force"] == true
   end
 
-  desc "release", "push all the packages from testing to release"
+  desc "update", "Update and rebuild (if necessary) all the packages in the suite"
+  def update(suite="testing")
+    log :info, "Updating all packages in the #{suite.fg "blue"} suite"
+    repo = get_repo_handle
+
+    updated = 0
+    repo.list_packages(suite).each do |pkg|
+      log :info, "Updating #{pkg.name.fg "blue"}"
+      begin
+        version = pkg.build
+      rescue Dr::Package::UnableToBuild
+        log :info, ""
+        next
+      end
+
+      log :info, ""
+      pkg.push pkg.name, version, suite if version
+      updated += 1
+    end
+
+    log :info, "Updated #{updated.to_s.fg "blue"} packages in #{suite.fg "blue"}"
+  end
+
+  desc "release", "Push all the packages from testing to release"
   def release
     repo = get_repo_handle
 

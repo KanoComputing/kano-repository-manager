@@ -3,6 +3,9 @@ require "dr/shellcmd"
 
 module Dr
   class Package
+    class UnableToBuild < RuntimeError
+    end
+
     attr_reader :name
 
     include Logger

@@ -35,9 +35,9 @@ module Dr
     end
 
     def build(branch=nil, force=false)
-      log :warn, "The source of the #{@name.fg "blue"} package is not " +
+      log :warn, "The sources of the #{@name.fg "blue"} package are not " +
                  "managed by #{"dr".bright}"
-      raise "Unable to build the package"
+      raise UnableToBuild.new "Unable to build the package"
     end
   end
 end

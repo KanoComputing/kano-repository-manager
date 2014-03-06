@@ -71,10 +71,22 @@ module Dr
       end
     end
 
-    def list_packages
+    def list_packages(suite=nil)
       pkgs = []
-      Dir.foreach @packages_dir do |pkg_name|
-        pkgs.push get_package pkg_name unless pkg_name =~ /^\./
+
+      if suite
+        Dir.foreach @packages_dir do |pkg_name|
+          unless pkg_name =~ /^\./
+            versions = get_subpackage_versions pkg_name
+            unless versions[codename_to_suite suite].empty?
+              pkgs.push get_package pkg_name
+            end
+          end
+        end
+      else
+        Dir.foreach @packages_dir do |pkg_name|
+          pkgs.push get_package pkg_name unless pkg_name =~ /^\./
+        end
       end
 
       pkgs.sort
