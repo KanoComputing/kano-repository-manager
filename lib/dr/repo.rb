@@ -209,7 +209,9 @@ module Dr
       end
 
       unless is_of_higher_version
-        log :warn, "Version #{version.style "version"} already available in #{suite}"
+        log :warn, "The #{suite} suite already contains " +
+                   "#{pkg.name.style "pkg-name"} version " +
+                   "#{version.style "version"}"
         if force
           reprepro = "reprepro -b #{@location}/archive " +
                      "--gnupghome #{location}/gnupg-keyring/ removesrc " +
@@ -221,7 +223,8 @@ module Dr
         end
       end
 
-      log :info, "Pushing #{pkg_name} version #{version} to #{suite}"
+      log :info, "Pushing #{pkg_name.style "pkg-name"} version " +
+                 "#{version.style "version"} to #{suite}"
       reprepro = "reprepro -b #{@location}/archive " +
                  "--gnupghome #{location}/gnupg-keyring/ includedeb " +
                  "#{suite} #{debs.join " "}"
@@ -238,7 +241,7 @@ module Dr
         raise "Unpush failed"
       end
 
-      log :info, "Removing #{pkg_name} from #{suite}"
+      log :info, "Removing #{pkg_name.style "pkg-name"} from #{suite}"
       reprepro = "reprepro -b #{@location}/archive " +
                  "--gnupghome #{location}/gnupg-keyring/ removesrc " +
                  "#{suite} #{pkg.name}"
@@ -275,7 +278,7 @@ module Dr
             unpush pkg_name, suite if versions.has_value? version
           end
         else
-          log :warn, "This build of #{pkg_name} is " +
+          log :warn, "This build of #{pkg_name.style "pkg-name"} is " +
                      "still being used, add -f to force-remove"
           return
         end
@@ -294,7 +297,9 @@ module Dr
       raise "The package hasn't been built yet." unless hist.length > 0
       version = hist[0] unless version
 
-      raise "Build #{version} doesn't exist" unless pkg.build_exists? version
+      unless pkg.build_exists? version
+        raise "Build #{version.style "version"} doesn't exist"
+      end
 
       Dir["#{@location}/packages/#{pkg.name}/builds/#{version}/*"]
     end

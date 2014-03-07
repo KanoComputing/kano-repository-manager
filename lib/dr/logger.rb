@@ -3,7 +3,7 @@ require "tco"
 tco_conf = Tco::config
 
 tco_conf.names["green"] = "#99ad6a"
-tco_conf.names["yellow"] = "#edc951" #"#d8ad4c"
+tco_conf.names["yellow"] = "#d8ad4c"
 tco_conf.names["red"] = "#cc333f" #"#cf6a4c"
 tco_conf.names["light-grey"] = "#ababab"
 tco_conf.names["dark-grey"] = "#2b2b2b"
