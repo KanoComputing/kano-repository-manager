@@ -60,7 +60,7 @@ module Dr
           l = tag(@tag, l.fg("red")) if @tag
           log(:err, l.chomp)
         end
-        raise "'#{@cmd}' failed!" if @raise_on_error
+        raise "'#{@cmd}' failed!".fg("red") if @raise_on_error
       end
     end
   end
