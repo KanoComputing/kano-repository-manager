@@ -57,7 +57,7 @@ module Dr
         end
 
         out_lines.each do |l|
-          l = @tag.fg("#1b8efa") + " " + l if @tag
+          l = tag(@tag, l.fg("red")) if @tag
           log(:err, l.chomp)
         end
         raise "'#{@cmd}' failed!" if @raise_on_error
