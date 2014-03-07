@@ -3,12 +3,14 @@ require "tco"
 tco_conf = Tco::config
 
 tco_conf.names["green"] = "#99ad6a"
-tco_conf.names["yellow"] = "#d8ad4c"
-tco_conf.names["red"] = "#cf6a4c"
+tco_conf.names["yellow"] = "#edc951" #"#d8ad4c"
+tco_conf.names["red"] = "#cc333f" #"#cf6a4c"
 tco_conf.names["light-grey"] = "#ababab"
 tco_conf.names["dark-grey"] = "#2b2b2b"
 tco_conf.names["purple"] = "#90559e"
-tco_conf.names["blue"] = "#1b8efa"
+tco_conf.names["blue"] = "#4D9EEB" #"#1b8efa"
+tco_conf.names["orange"] = "#ff842a"
+tco_conf.names["brown"] = "#6a4a3c"
 
 tco_conf.styles["info"] = {
   :fg => "green",
@@ -39,6 +41,27 @@ tco_conf.styles["debug"] = {
 tco_conf.styles["log-head"] = {
   :fg => "purple",
   :bg => "dark-grey",
+  :bright => false,
+  :underline => false
+}
+
+tco_conf.styles["pkg-name"] = {
+  :fg => "orange",
+  :bg => "",
+  :bright => false,
+  :underline => false
+}
+
+tco_conf.styles["subpkg-name"] = {
+  :fg => "purple",
+  :bg => "",
+  :bright => false,
+  :underline => false
+}
+
+tco_conf.styles["version"] = {
+  :fg => "brown",
+  :bg => "",
   :bright => false,
   :underline => false
 }
@@ -74,7 +97,7 @@ module Dr
     end
 
     def tag(tag, msg)
-      tag.fg("blue") << " " << msg
+      tag.fg("blue").bg("dark-grey") << " " << msg
     end
   end
 end

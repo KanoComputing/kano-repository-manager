@@ -98,7 +98,7 @@ module Dr
 
     def get_package(name)
       unless File.exists? "#{@packages_dir}/#{name}"
-        raise "Package '#{name}' doesn't exist in the repo."
+        raise "Package #{name.style "pkg-name"} doesn't exist in the repo"
       end
 
       if File.exists? "#{@packages_dir}/#{name}/source"
@@ -209,7 +209,7 @@ module Dr
       end
 
       unless is_of_higher_version
-        log :warn, "Version #{version.fg("blue")} already available in #{suite}"
+        log :warn, "Version #{version.style "version"} already available in #{suite}"
         if force
           reprepro = "reprepro -b #{@location}/archive " +
                      "--gnupghome #{location}/gnupg-keyring/ removesrc " +
@@ -249,7 +249,7 @@ module Dr
       pkg = get_package pkg_name
 
       if is_used? pkg_name
-        log :warn, "The #{pkg_name.fg "blue"} package is still used"
+        log :warn, "The #{pkg_name.style "pkg-name"} package is still used"
         raise "Operation canceled, add -f to remove anyway" unless force
 
         log :info, "Will be force-removed anyway"
@@ -259,7 +259,7 @@ module Dr
         end
       end
 
-      log :info, "Removing #{pkg_name} from the repository"
+      log :info, "Removing #{pkg_name.style "pkg-name"} from the repository"
       FileUtils.rm_rf "#{location}/packages/#{pkg_name}"
     end
 
@@ -268,8 +268,8 @@ module Dr
 
       if is_used?(pkg_name, version)
         if force
-          log :info, "Force-removing #{version.fg("blue")} version of " +
-                     "#{pkg_name.fg("blue")}"
+          log :info, "Force-removing #{version.style "version"} version of " +
+                     "#{pkg_name.style "pkg-name"}"
           versions_by_suite = get_subpackage_versions pkg_name
           versions_by_suite.each do |suite, versions|
             unpush pkg_name, suite if versions.has_value? version
@@ -280,8 +280,8 @@ module Dr
           return
         end
       else
-        log :info, "Removing the #{version.fg("blue")} version of " +
-                    "#{pkg_name.fg("blue")}"
+        log :info, "Removing the #{version.style "version"} version of " +
+                   "#{pkg_name.style "pkg-name"}"
       end
 
       pkg.remove_build version

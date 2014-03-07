@@ -56,35 +56,48 @@ class List < ExtendedThor
     log :info, "Listing all source packages in the repository"
 
     repo.list_packages.each do |pkg|
-      log :info, "  #{pkg.name}"
+      log :info, "  #{pkg.name.fg "orange"}"
     end
   end
 
   desc "versions PACKAGE", "Show the history of all available versions for a package"
   def versions(pkg_name)
     repo = get_repo_handle
-    log :info, "Listing all built versions of '#{pkg_name}'"
+    log :info, "Listing all built versions of #{pkg_name.style "pkg-name"}"
 
     suites = repo.get_suites
 
     pkg = repo.get_package pkg_name
     pkg.history.each do |version|
-      line = "#{version}"
+      line = "#{version.style "version"}"
 
       if pkg.build_exists? version
         debs = repo.get_build pkg.name, version
 
         metadata = repo.get_build_metadata pkg.name, version
-        line << " {#{metadata["branch"].fg "blue"}}" if metadata.has_key? "branch"
+        if metadata.has_key? "branch"
+          open = "{".fg "dark-grey"
+          close = "}".fg "dark-grey"
+          line << " " + open + metadata["branch"].fg("blue") + close
+        end
 
         subpkgs = debs.map { |p| subpkg = File.basename(p).split("_")[0] }
       end
 
+      open = "[".fg "dark-grey"
+      close = "]".fg "dark-grey"
+
       if subpkgs.length == 0
-        line << " [#{"broken".fg "red"}]"
+        line << " " + open + "broken".fg("red") + close
       else
         suites.each do |suite, codename|
           codename = suite if codename == nil
+
+          colour = case suite
+          when "stable" then "red"
+          when "testing" then "yellow"
+          when "unstable" then "green"
+          else nil end
 
             all_included = true
             subpkgs.each do |subpkg|
@@ -93,7 +106,13 @@ class List < ExtendedThor
               end
             end
 
-            line << " [#{codename}]" if all_included
+            if all_included
+              if colour
+                line << " " + open + codename.fg(colour) + close
+              else
+                line << " " + open + codename + close
+              end
+            end
         end
       end
       log :info, "  #{line}"
@@ -108,7 +127,7 @@ class List < ExtendedThor
     exists = suites.inject(false) { |r, s| r || s.include?(suite) }
     raise "Suite '#{suite}' doesn't exist" unless exists
 
-    log :info, "Listing all packages in #{suite.fg "blue"}"
+    log :info, "Listing all the packages in #{suite.fg "blue"}"
 
     suite = repo.codename_to_suite suite
     suite_packages = repo.list_packages
@@ -116,11 +135,13 @@ class List < ExtendedThor
       versions = repo.get_subpackage_versions pkg.name
       unless versions[suite].empty?
         if versions[suite].length == 1 && versions[suite].has_key?(pkg.name)
-          log :info, "  #{pkg.name.fg "blue"}  #{versions[suite][pkg.name]}"
+          log :info, "  #{pkg.name.style "pkg-name"}  " +
+                     "#{versions[suite][pkg.name].style "version"}"
         else
-          log :info, "  #{pkg.name.fg "blue"}"
+          log :info, "  #{pkg.name.style "pkg-name"}"
           versions[suite].each do |subpkg, version|
-            log :info, "    #{subpkg} #{version}"
+            log :info, "    #{subpkg.style "subpkg-name"}  " +
+                       "#{version.style "version"}"
           end
         end
       end
@@ -226,7 +247,7 @@ class RepoCLI < ExtendedThor
     version = pkg.build branch, force
 
     unless version
-      log :info, "Build stopped (add -f to build anyway)"
+      log :warn, "Build stopped (add -f to build anyway)"
       return
     end
 
@@ -265,7 +286,7 @@ class RepoCLI < ExtendedThor
   end
 
   desc "list SUBCOMMAND [ARGS]", "show information about packages"
-  map "ls" => :list
+  map "l" => :list, "ls" => :list
   subcommand "list", List
 
   desc "rm [pkg-name]", "remove a package completely from the build system"
@@ -291,7 +312,7 @@ class RepoCLI < ExtendedThor
 
     updated = 0
     repo.list_packages(suite).each do |pkg|
-      log :info, "Updating #{pkg.name.fg "blue"}"
+      log :info, "Updating #{pkg.name.style "pkg-name"}"
       begin
         version = pkg.build
       rescue Dr::Package::UnableToBuild
@@ -328,8 +349,8 @@ class RepoCLI < ExtendedThor
   end
 end
 
-#begin
-  RepoCLI.start ARGV
-#rescue Exception => e
-#  Dr::Logger.log :err, e.to_s
-#end
+begin
+ RepoCLI.start ARGV
+rescue Exception => e
+  Dr::Logger.log :err, e.to_s
+end

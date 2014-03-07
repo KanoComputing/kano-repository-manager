@@ -10,7 +10,8 @@ module Dr
         src_name = dpkg.out.chomp
       end
 
-      log :info, "Adding the #{File.basename(deb_file).fg("blue")} package"
+      deb_file_name = File.basename(deb_file)
+      log :info, "Adding the #{deb_file_name.style "subpkg-name"} package"
 
       dpkg = ShellCmd.new "dpkg-deb --field #{deb_file} Version", :tag => "dpkg"
       version = dpkg.out.chomp
@@ -21,7 +22,7 @@ module Dr
         raise "This deb file is already in the repo"
       end
 
-      log :info, "Adding a build to the #{src_name.fg "blue"} source package"
+      log :info, "Adding a build to the #{src_name.style "pkg-name"} source package"
 
       log :info, "Signing the deb file"
       repo.sign_deb deb_file
@@ -35,8 +36,8 @@ module Dr
     end
 
     def build(branch=nil, force=false)
-      log :warn, "The sources of the #{@name.fg "blue"} package are not " +
-                 "managed by #{"dr".bright}"
+      log :warn, "The sources of the #{@name.style "pkg-name"} package are " +
+                 "not managed by #{"dr".bright}"
       raise UnableToBuild.new "Unable to build the package"
     end
   end

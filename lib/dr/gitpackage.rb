@@ -38,7 +38,7 @@ module Dr
           raise "Adding failed"
         end
 
-        log :info, "Adding #{src_name.fg "blue"} to the repository"
+        log :info, "Adding #{src_name.style "pkg-name"} to the repository"
         FileUtils.mkdir_p "#{pkg_dir}"
 
         log :info, "Setting up builds directory"
@@ -47,7 +47,7 @@ module Dr
         log :info, "Setting up the source directory"
         FileUtils.mv "#{tmp}/git/.git", "#{pkg_dir}/source"
 
-        log :info, "Package #{src_name} added successfully"
+        log :info, "The #{src_name.style "pkg-name"} package added successfully"
       end
     end
 
@@ -75,12 +75,12 @@ module Dr
           ShellCmd.new git_cmd, :tag => "git", :show_out => true
 
           version = PkgVersion.new get_version "#{src_dir}/debian/changelog"
-          log :info, "Source version: #{version}"
+          log :info, "Source version: #{version.to_s.style "version"}"
 
           while build_exists? version
             version.increment!
           end
-          log :info, "Building version: #{version}"
+          log :info, "Building version: #{version.to_s.style "version"}"
 
           log :info, "Updating changelog"
           now = Time.new.strftime("%a, %-d %b %Y %T %z")
@@ -110,8 +110,9 @@ module Dr
           end
           arches.each do |arch|
             @repo.buildroot(arch).open do |br|
-              log :info, "Building the #{@name.fg("blue")} package " +
-                         "v#{version} for #{arch}"
+              log :info, "Building the #{@name.style "pkg-name"} package " +
+                         "version #{version} for #{arch}"
+
               # Moving to the proper directory
               build_dir_name = "#{@name}-#{version.upstream}"
               build_dir = "#{br}/#{build_dir_name}"
@@ -166,19 +167,22 @@ EOS
               debs.each do |pkg|
                 FileUtils.cp pkg, build_dir
 
-                log :info, "Signing the #{File.basename(pkg).fg("blue")} package"
-                @repo.sign_deb "#{build_dir}/#{File.basename(pkg)}"
+                deb_filename = File.basename(pkg)
+                log :info, "Signing the #{deb_filename.style "subpkg-name"} package"
+                @repo.sign_deb "#{build_dir}/#{deb_filename}"
               end
 
               log :info, "Writing package metadata"
               File.open "#{build_dir}/.metadata", "w" do |f|
                 YAML.dump({"branch" => branch}, f)
               end
+              log :info, "The #{@name.style "pkg-name"} package has been " +
+                         "built successfully."
             end
           end
         end
       else
-        log :info, "There were no changes in the #{@name.fg("blue")} package"
+        log :info, "There were no changes in the #{@name.style "pkg-name"} package"
       end
       version
     end
