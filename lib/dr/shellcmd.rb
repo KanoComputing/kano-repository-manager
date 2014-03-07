@@ -53,7 +53,7 @@ module Dr
       if @status.exitstatus != @expect
         out_lines = @out.split "\n"
         if out_lines.length > 10
-          out_lines = out_lines[-9..-1]
+          out_lines = out_lines[-10..-1]
         end
 
         out_lines.each do |l|
