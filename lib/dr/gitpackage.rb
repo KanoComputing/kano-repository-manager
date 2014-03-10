@@ -56,8 +56,8 @@ module Dr
 
       @git_dir = "#{repo.location}/packages/#{name}/source"
 
-      git_cmd = ShellCmd.new "git --git-dir #{@git_dir} branch", {
-        :tag => "git-clone"
+      git_cmd = ShellCmd.new "git --git-dir #{@git_dir} --bare branch", {
+        :tag => "git"
       }
       @default_branch = git_cmd.out.chomp.lines.grep(/^*/)[0][2..-1]
     end
@@ -70,7 +70,7 @@ module Dr
       if curr_rev != orig_rev || force
         Dir.mktmpdir do |src_dir|
           log :info, "Extracting the sources"
-          git_cmd ="git --git-dir #{@git_dir} archive " +
+          git_cmd ="git --git-dir #{@git_dir} --bare archive " +
                    "--format tar #{branch} | tar x -C #{src_dir}"
           ShellCmd.new git_cmd, :tag => "git", :show_out => true
 
@@ -111,7 +111,7 @@ module Dr
           arches.each do |arch|
             @repo.buildroot(arch).open do |br|
               log :info, "Building the #{@name.style "pkg-name"} package " +
-                         "version #{version.style "version"} for #{arch}"
+                         "version #{version.to_s.style "version"} for #{arch}"
 
               # Moving to the proper directory
               build_dir_name = "#{@name}-#{version.upstream}"
@@ -191,10 +191,7 @@ EOS
     def update_from_origin(branch)
       log :info, "Pulling changes from origin"
 
-      git_cmd = "git --git-dir #{@git_dir} reset --hard HEAD 2>/dev/null"
-      git = ShellCmd.new git_cmd, :tag => "git"
-
-      git_cmd = "git --git-dir #{@git_dir} rev-parse #{branch} 2>/dev/null"
+      git_cmd = "git --git-dir #{@git_dir} --bare rev-parse #{branch} 2>/dev/null"
       git = ShellCmd.new git_cmd, :tag => "git"
 
       original_rev = git.out.chomp
@@ -202,10 +199,10 @@ EOS
 
       begin
         if @default_branch == branch
-          git_cmd = "git --git-dir #{@git_dir} pull origin #{branch}"
+          git_cmd = "git --git-dir #{@git_dir} --bare fetch origin #{branch}"
           ShellCmd.new git_cmd, :tag => "git", :show_out => true
         else
-          git_cmd = "git --git-dir #{@git_dir} fetch origin #{branch}:#{branch}"
+          git_cmd = "git --git-dir #{@git_dir} --bare fetch origin #{branch}:#{branch}"
           ShellCmd.new git_cmd, :tag => "git", :show_out => true
         end
       rescue Exception => e
@@ -213,7 +210,7 @@ EOS
         raise e
       end
 
-      git_cmd = "git --git-dir #{@git_dir} rev-parse #{branch} 2>/dev/null"
+      git_cmd = "git --git-dir #{@git_dir} --bare rev-parse #{branch} 2>/dev/null"
       git = ShellCmd.new git_cmd, :tag => "git"
       current_rev = git.out.chomp
 
