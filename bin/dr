@@ -321,7 +321,7 @@ class RepoCLI < ExtendedThor
       end
 
       log :info, ""
-      pkg.push pkg.name, version, suite if version
+      repo.push pkg.name, version, suite if version
       updated += 1
     end
 
