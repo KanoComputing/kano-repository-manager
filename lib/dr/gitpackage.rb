@@ -111,7 +111,7 @@ module Dr
           arches.each do |arch|
             @repo.buildroot(arch).open do |br|
               log :info, "Building the #{@name.style "pkg-name"} package " +
-                         "version #{version} for #{arch}"
+                         "version #{version.style "version"} for #{arch}"
 
               # Moving to the proper directory
               build_dir_name = "#{@name}-#{version.upstream}"
