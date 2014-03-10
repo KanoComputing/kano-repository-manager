@@ -338,6 +338,18 @@ class RepoCLI < ExtendedThor
     end
   end
 
+  desc "force-sync", "Force cloning the source repository from scratch again"
+  def force_sync(pkg_name)
+    repo = get_repo_handle
+    pkg = repo.get_package pkg_name
+
+    unless pkg.is_a? Dr::GitPackage
+      raise "The source of #{pkg_name.style "pkg-name"} is not managed by #{"dr".bright}"
+    end
+
+    pkg.reinitialise_repo
+  end
+
   desc "snapshot", "save a snapshot of the archive"
   def snapshot(tag)
     repo = get_repo_handle

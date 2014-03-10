@@ -12,13 +12,20 @@ module Dr
                   "#{git_addr} #{tmp}/git"
         ShellCmd.new git_cmd, :tag => "git", :show_out => true
 
-        unless File.exists? "#{tmp}/git/debian/control"
+        FileUtils.mkdir_p "#{tmp}/src"
+
+        log :info, "Extracting the sources"
+        git_cmd ="git --git-dir #{tmp}/git --bare archive " +
+                 "--format tar #{default_branch} | tar x -C #{tmp}/src"
+        ShellCmd.new git_cmd, :tag => "git", :show_out => true
+
+        unless File.exists? "#{tmp}/src/debian/control"
           log :err, "The debian packaging files not found in the repository"
           raise "Adding a package from #{git_addr} failed"
         end
 
         src_name = nil
-        File.open "#{tmp}/git/debian/control", "r" do |f|
+        File.open "#{tmp}/src/debian/control", "r" do |f|
           f.each_line do |line|
             match = line.match /^Source: (.+)$/
             if match
@@ -46,7 +53,7 @@ module Dr
         FileUtils.mkdir_p "#{pkg_dir}/builds"
 
         log :info, "Setting up the source directory"
-        FileUtils.mv "#{tmp}/git/.git", "#{pkg_dir}/source"
+        FileUtils.mv "#{tmp}/git", "#{pkg_dir}/source"
 
         log :info, "The #{src_name.style "pkg-name"} package added successfully"
       end
@@ -60,7 +67,57 @@ module Dr
       git_cmd = ShellCmd.new "git --git-dir #{@git_dir} --bare branch", {
         :tag => "git"
       }
-      @default_branch = git_cmd.out.chomp.lines.grep(/^*/)[0][2..-1]
+      @default_branch = git_cmd.out.chomp.lines.grep(/^\*/)[0][2..-1].chomp
+    end
+
+    def reinitialise_repo
+      git_cmd = "git --git-dir #{@git_dir} --bare remote show origin -n"
+      git = ShellCmd.new git_cmd, :tag => "git"
+      git_addr = git.out.lines.grep(/Fetch URL/)[0].chomp[13..-1]
+
+      Dir.mktmpdir do |tmp|
+        git_cmd = "git clone --mirror --branch #{@default_branch} " +
+                  "#{git_addr} #{tmp}/git"
+        ShellCmd.new git_cmd, :tag => "git", :show_out => true
+
+        src_dir = "#{tmp}/src"
+        FileUtils.mkdir_p src_dir
+
+        log :info, "Extracting the sources"
+        git_cmd ="git --git-dir #{@git_dir} --bare archive " +
+                 "--format tar #{@default_branch} | tar x -C #{src_dir}"
+        ShellCmd.new git_cmd, :tag => "git", :show_out => true
+
+        unless File.exists? "#{tmp}/src/debian/control"
+          log :err, "The debian packaging files not found in the repository"
+          raise "Adding a package from #{git_addr} failed"
+        end
+
+        src_name = nil
+        File.open "#{tmp}/src/debian/control", "r" do |f|
+          f.each_line do |line|
+            match = line.match /^Source: (.+)$/
+            if match
+              src_name = match.captures[0]
+              break
+            end
+          end
+        end
+
+        unless src_name
+          log :err, "Couldn't identify the source package"
+          raise "Adding a package from #{git_addr} failed"
+        end
+
+        unless src_name == @name
+          log :err, "The name of the package in the repo has changed"
+          raise "Adding a package from #{git_addr} failed"
+        end
+
+        src_dir = "#{@repo.location}/packages/#{@name}/source"
+        FileUtils.rm_rf src_dir
+        FileUtils.mv "#{tmp}/git", "#{src_dir}"
+      end
     end
 
     def build(branch=nil, force=false)
@@ -199,13 +256,13 @@ EOS
       original_rev = nil if original_rev == branch
 
       begin
-        if @default_branch == branch
-          git_cmd = "git --git-dir #{@git_dir} --bare fetch origin #{branch}"
+        #if @default_branch == branch
+          git_cmd = "git --git-dir #{@git_dir} --bare fetch origin"
           ShellCmd.new git_cmd, :tag => "git", :show_out => true
-        else
-          git_cmd = "git --git-dir #{@git_dir} --bare fetch origin #{branch}:#{branch}"
-          ShellCmd.new git_cmd, :tag => "git", :show_out => true
-        end
+        #else
+        #  git_cmd = "git --git-dir #{@git_dir} --bare fetch origin #{branch}:#{branch}"
+        #  ShellCmd.new git_cmd, :tag => "git", :show_out => true
+        #end
       rescue Exception => e
         log :err, "Unable to pull from origin"
         raise e
