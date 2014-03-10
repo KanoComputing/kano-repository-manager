@@ -8,7 +8,8 @@ module Dr
   class GitPackage < Package
     def self.setup(repo, git_addr, default_branch, force=false)
       Dir.mktmpdir do |tmp|
-        git_cmd = "git clone --branch #{default_branch} #{git_addr} #{tmp}/git"
+        git_cmd = "git clone --mirror --branch #{default_branch} " +
+                  "#{git_addr} #{tmp}/git"
         ShellCmd.new git_cmd, :tag => "git", :show_out => true
 
         unless File.exists? "#{tmp}/git/debian/control"
