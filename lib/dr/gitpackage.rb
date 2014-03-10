@@ -191,6 +191,9 @@ EOS
     def update_from_origin(branch)
       log :info, "Pulling changes from origin"
 
+      git_cmd = "git --git-dir #{@git_dir} reset --hard HEAD 2>/dev/null"
+      git = ShellCmd.new git_cmd, :tag => "git"
+
       git_cmd = "git --git-dir #{@git_dir} rev-parse #{branch} 2>/dev/null"
       git = ShellCmd.new git_cmd, :tag => "git"
 
