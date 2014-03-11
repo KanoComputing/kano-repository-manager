@@ -37,6 +37,14 @@ module Dr
       self
     end
 
+    def <(o)
+      self.to_s < o.to_s
+    end
+
+    def <=(o)
+      self.to_s <= o.to_s
+    end
+
     def ==(o)
       self.to_s == o.to_s
     end
