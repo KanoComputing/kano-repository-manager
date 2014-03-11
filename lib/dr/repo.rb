@@ -211,7 +211,7 @@ module Dr
       unless is_of_higher_version
         log :warn, "The #{suite} suite already contains " +
                    "#{pkg.name.style "pkg-name"} version " +
-                   "#{version.style "version"}"
+                   "#{version.to_s.style "version"}"
         if force
           reprepro = "reprepro -b #{@location}/archive " +
                      "--gnupghome #{location}/gnupg-keyring/ removesrc " +
@@ -224,7 +224,7 @@ module Dr
       end
 
       log :info, "Pushing #{pkg_name.style "pkg-name"} version " +
-                 "#{version.style "version"} to #{suite}"
+                 "#{version.to_s.style "version"} to #{suite}"
       reprepro = "reprepro -b #{@location}/archive " +
                  "--gnupghome #{location}/gnupg-keyring/ includedeb " +
                  "#{suite} #{debs.join " "}"
