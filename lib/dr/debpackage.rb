@@ -18,17 +18,16 @@ module Dr
 
       deb_dir = "#{repo.location}/packages/#{src_name}/builds/#{version}"
 
-      if File.exists?("#{deb_dir}/#{File.basename deb_file}") && !force
+      if File.exists?("#{deb_dir}/#{deb_file_name}") && !force
         raise "This deb file is already in the repo"
       end
 
       log :info, "Adding a build to the #{src_name.style "pkg-name"} source package"
-
-      log :info, "Signing the deb file"
-      repo.sign_deb deb_file
-
       FileUtils.mkdir_p deb_dir
       FileUtils.cp "#{deb_file}", "#{deb_dir}/"
+
+      log :info, "Signing the deb file"
+      repo.sign_deb "#{deb_dir}/#{deb_file_name}"
     end
 
     def initialize(name, repo)
