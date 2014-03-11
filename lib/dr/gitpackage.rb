@@ -63,18 +63,14 @@ module Dr
       super name, repo
 
       @git_dir = "#{repo.location}/packages/#{name}/source"
-
-      git_cmd = ShellCmd.new "git --git-dir #{@git_dir} --bare branch", {
-        :tag => "git"
-      }
-      @default_branch = git_cmd.out.chomp.lines.grep(/^\*/)[0][2..-1].chomp
+      @default_branch = get_current_branch
     end
 
     def reinitialise_repo
-      git_cmd = "git --git-dir #{@git_dir} --bare remote show origin -n"
-      git = ShellCmd.new git_cmd, :tag => "git"
-      git_addr = git.out.lines.grep(/Fetch URL/)[0].chomp[13..-1]
+      git_addr = get_repo_url
 
+      log :info, "Re-downloading the source repository of " +
+                 "#{@name.style "pkg-name"}"
       Dir.mktmpdir do |tmp|
         git_cmd = "git clone --mirror --branch #{@default_branch} " +
                   "#{git_addr} #{tmp}/git"
@@ -309,6 +305,19 @@ EOS
       end
 
       arches.uniq
+    end
+
+    def get_repo_url
+      git_cmd = "git --git-dir #{@git_dir} --bare remote show origin -n"
+      git = ShellCmd.new git_cmd, :tag => "git"
+      git.out.lines.grep(/Fetch URL/)[0].chomp[13..-1]
+    end
+
+    def get_current_branch
+      git_cmd = ShellCmd.new "git --git-dir #{@git_dir} --bare branch", {
+        :tag => "git"
+      }
+      git_cmd.out.chomp.lines.grep(/^\*/)[0][2..-1].chomp
     end
   end
 end
