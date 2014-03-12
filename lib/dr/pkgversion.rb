@@ -68,6 +68,12 @@ module Dr
       v
     end
 
+    def source
+      v = "#{upstream}"
+      v << "-#{debian}" if @debian
+      v
+    end
+
     private
     def today
       Time.now.strftime "%Y%m%d"

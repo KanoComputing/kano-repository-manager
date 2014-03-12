@@ -79,10 +79,7 @@ module Dr
         src_dir = "#{tmp}/src"
         FileUtils.mkdir_p src_dir
 
-        log :info, "Extracting the sources"
-        git_cmd ="git --git-dir #{@git_dir} --bare archive " +
-                 "--format tar #{@default_branch} | tar x -C #{src_dir}"
-        ShellCmd.new git_cmd, :tag => "git", :show_out => true
+        checkout @default_branch, src_dir
 
         unless File.exists? "#{tmp}/src/debian/control"
           log :err, "The debian packaging files not found in the repository"
@@ -123,18 +120,15 @@ module Dr
       orig_rev, curr_rev = update_from_origin branch
       if curr_rev != orig_rev || force
         Dir.mktmpdir do |src_dir|
-          log :info, "Extracting the sources"
-          git_cmd ="git --git-dir #{@git_dir} --bare archive " +
-                   "--format tar #{branch} | tar x -C #{src_dir}"
-          ShellCmd.new git_cmd, :tag => "git", :show_out => true
+          checkout branch, src_dir
 
           version = PkgVersion.new get_version "#{src_dir}/debian/changelog"
-          log :info, "Source version: #{version.to_s.style "version"}"
+          log :info, "Source version: #{version.source.style "version"}"
 
           while build_exists? version
             version.increment!
           end
-          log :info, "Building version: #{version.to_s.style "version"}"
+          log :info, "Build version: #{version.to_s.style "version"}"
 
           log :info, "Updating changelog"
           now = Time.new.strftime("%a, %-d %b %Y %T %z")
@@ -245,28 +239,17 @@ EOS
     def update_from_origin(branch)
       log :info, "Pulling changes from origin"
 
-      git_cmd = "git --git-dir #{@git_dir} --bare rev-parse #{branch} 2>/dev/null"
-      git = ShellCmd.new git_cmd, :tag => "git"
-
-      original_rev = git.out.chomp
-      original_rev = nil if original_rev == branch
+      original_rev = get_rev branch
 
       begin
-        #if @default_branch == branch
-          git_cmd = "git --git-dir #{@git_dir} --bare fetch origin"
-          ShellCmd.new git_cmd, :tag => "git", :show_out => true
-        #else
-        #  git_cmd = "git --git-dir #{@git_dir} --bare fetch origin #{branch}:#{branch}"
-        #  ShellCmd.new git_cmd, :tag => "git", :show_out => true
-        #end
+        git_cmd = "git --git-dir #{@git_dir} --bare fetch origin"
+        ShellCmd.new git_cmd, :tag => "git", :show_out => true
       rescue Exception => e
         log :err, "Unable to pull from origin"
         raise e
       end
 
-      git_cmd = "git --git-dir #{@git_dir} --bare rev-parse #{branch} 2>/dev/null"
-      git = ShellCmd.new git_cmd, :tag => "git"
-      current_rev = git.out.chomp
+      current_rev = get_rev branch
 
       [original_rev, current_rev]
     end
@@ -318,6 +301,24 @@ EOS
         :tag => "git"
       }
       git_cmd.out.chomp.lines.grep(/^\*/)[0][2..-1].chomp
+    end
+
+    def get_rev(branch)
+      git_cmd = "git --git-dir #{@git_dir} --bare rev-parse #{branch} 2>/dev/null"
+      git = ShellCmd.new git_cmd, :tag => "git", :expect => [0, 128]
+
+      if git.status.exitstatus == 0
+        git.out.chomp
+      else
+        nil
+      end
+    end
+
+    def checkout(branch, dir)
+      log :info, "Extracting the sources"
+      git_cmd ="git --git-dir #{@git_dir} --bare archive " +
+               "--format tar #{branch} | tar x -C #{dir}"
+      ShellCmd.new git_cmd, :tag => "git", :show_out => true
     end
   end
 end

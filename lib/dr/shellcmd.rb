@@ -50,7 +50,8 @@ module Dr
         @status = wait_thr.value
       end
 
-      if @status.exitstatus != @expect
+      if (@expect.is_a?(Array) && !@expect.include?(@status.exitstatus)) ||
+         (@expect.is_a?(Integer) && @status.exitstatus != @expect)
         out_lines = @out.split "\n"
         if out_lines.length > 10
           out_lines = out_lines[-10..-1]
