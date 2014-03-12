@@ -320,9 +320,10 @@ class RepoCLI < ExtendedThor
         next
       end
 
-      log :info, ""
       repo.push pkg.name, version, suite if version
       updated += 1
+
+      log :info, ""
     end
 
     log :info, "Updated #{updated.to_s.fg "blue"} packages in #{suite.fg "blue"}"
