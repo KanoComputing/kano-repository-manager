@@ -24,8 +24,15 @@ module Dr
         log :info, "Preparing the build root"
         ShellCmd.new "sudo tar xz -C #{tmp} -f #{@location}", :tag => "tar"
         begin
+          log :info, "Mounting the /proc file system"
+          mnt_cmd = "sudo chroot #{tmp} mount -t proc none /proc"
+          ShellCmd.new mnt_cmd, :tag => "mount"
           yield tmp
         ensure
+          log :info, "Unmounting the /proc file system"
+          umnt_cmd = "sudo chroot #{tmp} umount -f /proc"
+          ShellCmd.new umnt_cmd, :tag => "umount"
+
           log :info, "Cleaning up the buildroot"
           ShellCmd.new "sudo rm -rf #{tmp}/*", :tag => "rm"
         end
