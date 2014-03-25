@@ -10,9 +10,34 @@ module Dr
     def initialize(arch, br_archive=nil)
       @location = br_archive
 
-      @extra_pkgs = "sudo,vim,ca-certificates,fakeroot,build-essential," +
+      @extra_pkgs = "sudo,vim,ca-certificates,fakeroot,build-essential,curl," +
                     "devscripts,debhelper,git,bc,locales,equivs,pkg-config"
-      @repo = "http://mirrordirector.raspbian.org/raspbian/"
+      @repos = {
+        :raspbian => {
+          :url => "http://mirror.ox.ac.uk/sites/archive.raspbian.org/archive/raspbian/",
+          :key => "http://mirror.ox.ac.uk/sites/archive.raspbian.org/archive/raspbian.public.key",
+          :src => true,
+          :codename => "wheezy",
+          :components => "main contrib non-free rpi"
+        },
+
+        :raspi_foundation => {
+          :url => "http://archive.raspberrypi.org/debian/",
+          :key => "http://archive.raspberrypi.org/debian/raspberrypi.gpg.key",
+          :src => false,
+          :codename => "wheezy",
+          :components => "main"
+        },
+
+        :kano => {
+          :url => "http://dev.kano.me/archive/",
+          :key => "http://dev.kano.me/archive/repo.gpg.key",
+          :src => false,
+          :codename => "release",
+          :components => "main"
+        }
+      }
+      @base_repo = :raspbian
 
       if br_archive == nil || !File.exists?(br_archive)
         setup arch
@@ -51,7 +76,8 @@ module Dr
           log :info, "Bootstrapping Raspian (first stage)"
 
           cmd = "sudo debootstrap --foreign --variant=buildd --no-check-gpg " +
-                "--include=#{@extra_pkgs} --arch=#{arch} wheezy #{broot} #{@repo}"
+                "--include=#{@extra_pkgs} --arch=#{arch} wheezy #{broot} " +
+                "#{@repos[@base_repo][:url]}"
           debootsrap = ShellCmd.new cmd, {
             :tag => "debootstrap",
             :show_out => true
@@ -72,9 +98,25 @@ module Dr
           }
 
           log :info, "Configuring the build root"
+
+          repo_setup_sequences = @repos.map do |name, repo|
+            seq = "echo 'deb #{repo[:url]} #{repo[:codename]} " +
+                  "#{repo[:components]}' >> /etc/apt/sources.list\n"
+
+            if repo.has_key?(:src) && repo[:src]
+              seq += "echo 'deb-src #{repo[:url]} #{repo[:codename]} " +
+                     "#{repo[:components]}' >> /etc/apt/sources.list\n"
+            end
+
+            if repo.has_key?(:key) && repo[:key]
+              seq += "curl --retry 5 '#{repo[:key]}' | apt-key add -\n"
+            end
+
+            seq
+          end
+
           cmd = "sudo chroot #{broot} <<EOF
-            echo 'deb #{@repo} wheezy main contrib non-free rpi' >> /etc/apt/sources.list
-            echo 'deb-src #{@repo} wheezy main contrib non-free rpi' >> /etc/apt/sources.list
+            #{repo_setup_sequences.join "\n\n"}
 
             echo 'en_US.UTF-8 UTF-8' >/etc/locale.gen
             locale-gen en_US.UTF-8
