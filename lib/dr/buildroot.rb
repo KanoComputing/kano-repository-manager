@@ -33,7 +33,7 @@ module Dr
           :url => "http://dev.kano.me/archive/",
           :key => "http://dev.kano.me/archive/repo.gpg.key",
           :src => false,
-          :codename => "release",
+          :codename => "devel",
           :components => "main"
         }
       }
