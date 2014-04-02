@@ -21,8 +21,16 @@ module Dr
           :components => "main contrib non-free rpi"
         },
 
-        :raspi_foundation => {
-          :url => "http://archive.raspberrypi.org/debian/",
+        #:raspi_foundation => {
+        #  :url => "http://archive.raspberrypi.org/debian/",
+        #  :key => "http://archive.raspberrypi.org/debian/raspberrypi.gpg.key",
+        #  :src => false,
+        #  :codename => "wheezy",
+        #  :components => "main"
+        #},
+        
+        :raspi_foundation_mirror => {
+          :url => "http://rpi.rutgers.edu/archive.raspberrypi.org/debian/",
           :key => "http://archive.raspberrypi.org/debian/raspberrypi.gpg.key",
           :src => false,
           :codename => "wheezy",
