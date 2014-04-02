@@ -330,12 +330,14 @@ class RepoCLI < ExtendedThor
   end
 
   desc "release", "Push all the packages from testing to release"
+  method_option :force, :aliases => "-f", :type => :boolean,
+                :desc => "Force-push all released packages"
   def release
     repo = get_repo_handle
 
     log :info, "Releasing all packages from testing"
     repo.list_packages.each do |pkg|
-      repo.push pkg.name, nil, "stable"
+      repo.push pkg.name, nil, "stable", (options["force"] == true)
     end
   end
 
