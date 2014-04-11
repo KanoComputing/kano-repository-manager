@@ -167,10 +167,11 @@ module Dr
               FileUtils.cp_r src_dir, build_dir
 
               # Make orig tarball
+              files = Dir["#{build_dir}/*"].map { |f| "\"#{f}\"" }.join " "
               log :info, "Creating orig source tarball"
               tar = "tar cz -C #{build_dir} --exclude=debian " +
                     "-f #{br}/#{@name}_#{version.upstream}.orig.tar.gz " +
-                    "`ls -1 #{build_dir}`"
+                    "#{files}"
               ShellCmd.new tar, :tag => "tar"
 
               apt = "sudo chroot #{br} apt-get update"
