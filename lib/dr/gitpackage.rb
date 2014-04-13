@@ -180,14 +180,6 @@ module Dr
             build_dir = "#{br}/#{build_dir_name}"
             FileUtils.cp_r src_dir, build_dir
 
-            # Make orig tarball
-            files = Dir["#{build_dir}/*"].map { |f| "\"#{f}\"" }.join " "
-            log :info, "Creating orig source tarball"
-            tar = "tar cz -C #{build_dir} --exclude=debian " +
-                  "-f #{br}/#{@name}_#{version.upstream}.orig.tar.gz " +
-                  "#{files}"
-            ShellCmd.new tar, :tag => "tar"
-
             apt = "sudo chroot #{br} apt-get update"
             deps = <<-EOS
 sudo chroot #{br} <<EOF
@@ -208,6 +200,14 @@ EOS
 
             log :info, "Installing build dependencies"
             ShellCmd.new deps, :tag => "mk-build-deps", :show_out => true
+
+            # Make orig tarball
+            files = Dir["#{build_dir}/*"].map { |f| "\"#{f}\"" }.join " "
+            log :info, "Creating orig source tarball"
+            tar = "tar cz -C #{build_dir} --exclude=debian " +
+                  "-f #{br}/#{@name}_#{version.upstream}.orig.tar.gz " +
+                  "#{files}"
+            ShellCmd.new tar, :tag => "tar"
 
             log :info, "Building the package"
             ShellCmd.new build, :tag => "debuild", :show_out => true
