@@ -124,7 +124,7 @@ module Dr
         history.each do |v|
           metadata = @repo.get_build_metadata @name, v
           if metadata.has_key?("revision") && metadata["revision"] == curr_rev
-            msg = "This revision of #{@name.style "pkg-name"} has alredy " +
+            msg = "This revision of #{@name.style "pkg-name"} has already " +
                   "been built and is available as #{v.to_s.style "version"}"
             log :info, msg
             return
@@ -186,7 +186,6 @@ module Dr
             tar = "tar cz -C #{build_dir} --exclude=debian " +
                   "-f #{br}/#{@name}_#{version.upstream}.orig.tar.gz " +
                   "#{files}"
-            p tar
             ShellCmd.new tar, :tag => "tar"
 
             apt = "sudo chroot #{br} apt-get update"
