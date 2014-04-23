@@ -150,6 +150,18 @@ module Dr
       v
     end
 
+    def suite_has_higher_pkg_version?(suite, pkg, version)
+      used_versions = get_subpackage_versions(pkg.name)[codename_to_suite(suite)]
+
+      has_higher_version = false
+      used_versions.each do |subpkg_name, subpkg_version|
+        if subpkg_version.to_s >= version.to_s
+          has_higher_version = true
+        end
+      end
+      has_higher_version
+    end
+
     def get_subpackage_versions(pkg_name)
       pkg = get_package pkg_name
       suites = get_suites
