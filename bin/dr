@@ -318,6 +318,9 @@ class RepoCLI < ExtendedThor
       rescue Dr::Package::UnableToBuild
         log :info, ""
         next
+      else # Ignore all other exceptions and try to build next package
+        log :info, ""
+        next
       end
 
       repo.push pkg.name, version, suite if version
