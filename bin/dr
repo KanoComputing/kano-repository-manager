@@ -172,7 +172,7 @@ class RepoCLI < ExtendedThor
     repo_conf[:desc] = desc if desc.length > 0
 
     arches = ask "   Architectures [#{repo_conf[:arches].join(" ").fg("yellow")}]:"
-    repo_conf[:arches] = arches.split /\s+/ if arches.length > 0
+    repo_conf[:arches] = arches.split(/\s+/) if arches.length > 0
 
     components = ask "   Components [#{repo_conf[:components].join(" ").fg("yellow")}]:"
     repo_conf[:components] = components.split /\s+/ if components.length > 0
@@ -323,8 +323,10 @@ class RepoCLI < ExtendedThor
         next
       end
 
-      repo.push pkg.name, version, suite if version
-      updated += 1
+      if version
+        repo.push pkg.name, version, suite
+        updated += 1
+      end
 
       log :info, ""
     end

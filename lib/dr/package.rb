@@ -6,6 +6,9 @@ module Dr
     class UnableToBuild < RuntimeError
     end
 
+    class BuildFailed < RuntimeError
+    end
+
     attr_reader :name
 
     include Logger

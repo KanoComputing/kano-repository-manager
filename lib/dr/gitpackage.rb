@@ -27,7 +27,7 @@ module Dr
         src_name = nil
         File.open "#{tmp}/src/debian/control", "r" do |f|
           f.each_line do |line|
-            match = line.match /^Source: (.+)$/
+            match = line.match(/^Source: (.+)$/)
             if match
               src_name = match.captures[0]
               break
@@ -89,7 +89,7 @@ module Dr
         src_name = nil
         File.open "#{tmp}/src/debian/control", "r" do |f|
           f.each_line do |line|
-            match = line.match /^Source: (.+)$/
+            match = line.match(/^Source: (.+)$/)
             if match
               src_name = match.captures[0]
               break
@@ -127,7 +127,7 @@ module Dr
             msg = "This revision of #{@name.style "pkg-name"} has already " +
                   "been built and is available as #{v.to_s.style "version"}"
             log :info, msg
-            return
+            return v
           end
         end
       end
@@ -294,7 +294,7 @@ EOS
       arches = []
       File.open control_file, "r" do |f|
         f.each_line do |l|
-          m = l.match /^Architecture: (.+)/
+          m = l.match(/^Architecture: (.+)/)
           arches += m.captures[0].chomp.split(" ") if m
         end
       end
