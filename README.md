@@ -70,6 +70,7 @@ on your internet connection.
 ![Creating a repo with dr](http://linuxwell.com/assets/images/posts/dr-init.png)
 
 #### Configuration
+
 As there can be several repositories present on a single system (you can run
 `dr init` as many times as you like), you need to tell **dr** which one it
 should use by default. Otherwise, we would have to type `--repo ~/example`
@@ -91,8 +92,8 @@ repositories:
 ### Add a few packages
 
 When your repo directory is up and running, the next step is to add a few
-packages to it. Here, you have two options; you can either add a pre-built
-deb files directly, or source packages hosted in git repositories.
+packages to it. Here, you have two options; you can either add a **pre-built
+deb files** directly, or **source packages** hosted in git repositories.
 
 To add a pre-build package run the following command:
 
@@ -116,7 +117,34 @@ else.
 
 ### Manage the packages
 
+Now when the package has been added, we need to build it. This can be done
+very easily using the `dr build <package-name>` command:
 
+![Building a package](http://linuxwell.com/assets/images/posts/dr-build.png)
+
+**dr** will switch to an isolated build environment and install all the
+build dependencies requested by the package. Then it will proceed to
+building it using the `debuild` command. Depending on how many dependencies
+your package has, this process should take around 2 to 5 minutes.
+
+When the package has been built (you can check by running
+`dr list versions <pkg-name>`). You can **push** the package to a specific
+suite, so it becomes available through the repository for people to download.
+This package hasn't been throughly tested yet, so we'll push it to the
+experimental **scratch** suite by running the following:
+
+```
+dr push kano-settings -s scratch
+```
+
+That's it! You can check whether the package was pushed correctly by listing
+all the packages in a specific suite:
+
+```
+dr list suite scratch
+```
+
+![Listing packages in a suite](http://linuxwell.com/assets/images/posts/dr-list-scratch.png)
 
 ## License
 
