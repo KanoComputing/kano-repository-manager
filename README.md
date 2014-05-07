@@ -7,144 +7,23 @@ Debian-based distribution. You can keep your sources in **git** and use the
 well in case your development is very fast and you ship new versions of
 your packages often (even several times a day).
 
-![Example of using dr](http://linuxwell.com/assets/images/posts/tco-example.png)
+The following diagram illustrates how `dr` works. It takes source packages
+that are managed in git repositories, builds them and serves them in
+different suites. For more information, please see this
+[project's wiki](https://github.com/KanoComputing/kano-package-system/wiki).
+
+<p align="center">
+  <img src="http://linuxwell.com/assets/images/posts/dr-basic.png"
+       alt="How dr operates">
+</p>
 
 It is the tool we use to manage our software repository and the custom
 packages for **Kano OS**. The application is written in **Ruby**, building
 on top of many other tools (such as reprepro, debuild, debhelper, and others).
 
-## Installation
+Here is like it looks like in the terminal:
 
-You will need to install several dependencies in order to be able to use
-**dr** properly. Running the following command should get you all you'll
-need:
-
-```bash
-sudo apt-get install git tar gzip devscripts debhelper debootstrap \
-                     qemu-user-static chroot ruby build-essential \
-                     curl reprepro rngd-tools
-```
-
-Note that because **dr** uses tools such as **debootstrap**, **debhelper**,
-and **debuild**, it's now limited for use on Debian-based distributions of
-Linux only.
-
-After you've got all the dependencies sorted, you can install **dr** with
-the following command:
-
-```bash
-sudo gem install dr
-```
-
-## Usage
-
-What follows is a rather basic and incomplete introduction to **dr**. For a more
-comprehensive guide, please visit the [project
-wiki](https://github.com/KanoComputing/kano-repository-manager/wiki) on GitHub.
-
-### Setting up the repository
-
-Before anything else, you need to initialise your repository. This can be
-quite a complex task, but worry not, **dr** will guide you through the
-whole process and set it up automatically. It will generate the GPG key pair
-and also prepare an isolated build environment where the packages will be
-built.
-
-To make sure there is enough entropy available on the system when the GPG
-pair is generated, make sure to run the following command before running
-`dr init`:
-
-```bash
-sudo rngd -r /dev/urandom
-```
-
-After that, run
-```bash
-dr init <location-of-your-new-repo>
-```
-
-**dr** will ask you several questions and proceed to preparing the build
-environment. The whole process can take up to 30 minutes to complete depending
-on your internet connection.
-
-![Creating a repo with dr](http://linuxwell.com/assets/images/posts/dr-init.png)
-
-#### Configuration
-
-As there can be several repositories present on a single system (you can run
-`dr init` as many times as you like), you need to tell **dr** which one it
-should use by default. Otherwise, we would have to type `--repo ~/example`
-with every single command. There are two place where you set this up:
-
-* either **system-wide** in the `/etc/dr.conf` file
-* or **per-user** in the `~/.dr.conf`
-
-Both files are simple **YAML** documents with the following format:
-
-```yaml
-default_repo: "example"
-
-repositories:
-  - name: "example"
-    location: "/home/radek/example"
-```
-
-### Add a few packages
-
-When your repo directory is up and running, the next step is to add a few
-packages to it. Here, you have two options; you can either add a **pre-built
-deb files** directly, or **source packages** hosted in git repositories.
-
-To add a pre-build package run the following command:
-
-```bash
-dr add --deb path/to/the/package_1.0-35_all.deb
-```
-
-However, the full power of **dr** is not unleashed until you add a source
-package, so that it can build and manage it for you. To add a source package,
-point **dr** to the git repository in which you manage your project's sources.
-
-```bash
-dr add --git https://github.com/KanoComputing/kano-settings
-```
-
-![Adding a source package](http://linuxwell.com/assets/images/posts/dr-add.png)
-
-**dr** is clever enough to determine all the information it needs about the
-package automatically from the sources, so you don't need to do anything
-else.
-
-### Manage the packages
-
-Now when the package has been added, we need to build it. This can be done
-very easily using the `dr build <package-name>` command:
-
-![Building a package](http://linuxwell.com/assets/images/posts/dr-build.png)
-
-**dr** will switch to an isolated build environment and install all the
-build dependencies requested by the package. Then it will proceed to
-building it using the `debuild` command. Depending on how many dependencies
-your package has, this process should take around 2 to 5 minutes.
-
-When the package has been built (you can check by running
-`dr list versions <pkg-name>`). You can **push** the package to a specific
-suite, so it becomes available through the repository for people to download.
-This package hasn't been throughly tested yet, so we'll push it to the
-experimental **scratch** suite by running the following:
-
-```
-dr push kano-settings -s scratch
-```
-
-That's it! You can check whether the package was pushed correctly by listing
-all the packages in a specific suite:
-
-```
-dr list suite scratch
-```
-
-![Listing packages in a suite](http://linuxwell.com/assets/images/posts/dr-list-scratch.png)
+![Example of using dr](http://linuxwell.com/assets/images/posts/tco-example.png)
 
 ## License
 
