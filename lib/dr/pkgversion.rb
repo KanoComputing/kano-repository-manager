@@ -1,3 +1,6 @@
+# Copyright (C) 2014 Kano Computing Ltd.
+# License: http://www.gnu.org/licenses/gpl-2.0.txt GNU General Public License v2
+
 module Dr
   class PkgVersion
     attr_accessor :upstream, :debian, :date, :build
