@@ -13,7 +13,7 @@ different suites. For more information, please see this
 [project's wiki](https://github.com/KanoComputing/kano-package-system/wiki).
 
 <p align="center">
-  <img src="http://imgur.com/pe8A9kd"
+  <img src="http://i.imgur.com/pe8A9kd.png"
        alt="How dr operates">
 </p>
 
