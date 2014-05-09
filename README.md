@@ -1,5 +1,7 @@
 # Kano Repository Manager
 
+[![Gem Version](https://badge.fury.io/rb/dr.svg)](http://badge.fury.io/rb/dr)
+
 **dr** (stands for debian repository) is a Debian repository management tool.
 It will help you set up and maintain your own small package repository for any
 Debian-based distribution. You can keep your sources in **git** and use the
