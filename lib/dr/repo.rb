@@ -72,7 +72,8 @@ module Dr
       FileUtils.mkdir_p @packages_dir
 
       conf[:arches].each do |arch|
-        BuildRoot.new arch, "#{@location}/build-root-#{arch}.tar.gz"
+        broot_loc = "#{@location}/build-root-#{arch}.tar.gz"
+        BuildRoot.new conf[:base], arch, broot_loc
       end
     end
 

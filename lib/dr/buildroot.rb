@@ -10,40 +10,51 @@ module Dr
   class BuildRoot
     include Logger
 
-    def initialize(arch, br_archive=nil)
+    @@os_bases = {
+      "Kano OS" => {
+        :arches => ["armhf", "armel"],
+        :repos => {
+          :raspbian => {
+            :url => "http://mirror.ox.ac.uk/sites/archive.raspbian.org/archive/raspbian/",
+            :key => "http://mirror.ox.ac.uk/sites/archive.raspbian.org/archive/raspbian.public.key",
+            :src => true,
+            :codename => "wheezy",
+            :components => "main contrib non-free rpi"
+          },
+
+          :raspi_foundation => {
+            :url => "http://archive.raspberrypi.org/debian/",
+            :key => "http://archive.raspberrypi.org/debian/raspberrypi.gpg.key",
+            :src => false,
+            :codename => "wheezy",
+            :components => "main"
+          },
+
+          :kano => {
+            :url => "http://dev.kano.me/archive/",
+            :key => "http://dev.kano.me/archive/repo.gpg.key",
+            :src => false,
+            :codename => "devel",
+            :components => "main"
+          }
+        },
+        :base => :raspbian,
+        :packages => []
+      }
+    }
+    def self.os_bases
+      @@os_bases
+    end
+
+    def initialize(base, arch, br_archive=nil)
       @location = br_archive
 
-      @extra_pkgs = "sudo,vim,ca-certificates,fakeroot,build-essential,curl," +
-                    "devscripts,debhelper,git,bc,locales,equivs,pkg-config"
-      @repos = {
-        :raspbian => {
-          :url => "http://mirror.ox.ac.uk/sites/archive.raspbian.org/archive/raspbian/",
-          :key => "http://mirror.ox.ac.uk/sites/archive.raspbian.org/archive/raspbian.public.key",
-          :src => true,
-          :codename => "wheezy",
-          :components => "main contrib non-free rpi"
-        },
-
-        :raspi_foundation => {
-          :url => "http://archive.raspberrypi.org/debian/",
-          :key => "http://archive.raspberrypi.org/debian/raspberrypi.gpg.key",
-          :src => false,
-          :codename => "wheezy",
-          :components => "main"
-        },
-
-        :kano => {
-          :url => "http://dev.kano.me/archive/",
-          :key => "http://dev.kano.me/archive/repo.gpg.key",
-          :src => false,
-          :codename => "devel",
-          :components => "main"
-        }
-      }
-      @base_repo = :raspbian
+      @essential_pkgs = "sudo,vim,ca-certificates,fakeroot,build-essential," +
+                        "curl,devscripts,debhelper,git,bc,locales,equivs," +
+                        "pkg-config"
 
       if br_archive == nil || !File.exists?(br_archive)
-        setup arch
+        setup base, arch
       end
     end
 
@@ -68,7 +79,19 @@ module Dr
     end
 
     private
-    def setup(arch)
+    def setup(base, arch)
+      unless @@os_bases.include? base
+        raise "OS base #{base.fg "blue"} isn't supported by dr."
+      end
+
+      unless @@os_bases[base][:arches].include? arch
+        raise "Arch #{arch.fg "blue"} not supported by this base."
+      end
+
+      repos = @@os_bases[base][:repos]
+      base_repo = @@os_bases[base][:base].to_sym
+      additional_pkgs = @@os_bases[base][:packages].join ","
+
       Dir.mktmpdir do |tmp|
         broot = "#{tmp}/broot"
         FileUtils.mkdir_p "#{tmp}/broot"
@@ -76,11 +99,11 @@ module Dr
         log :info, "Setting up the buildroot"
 
         begin
-          log :info, "Bootstrapping Raspian (first stage)"
+          log :info, "Bootstrapping #{base} (first stage)"
 
           cmd = "sudo debootstrap --foreign --variant=buildd --no-check-gpg " +
-                "--include=#{@extra_pkgs} --arch=#{arch} wheezy #{broot} " +
-                "#{@repos[@base_repo][:url]}"
+                "--include=#{@essential_pkgs},#{additional_pkgs} " +
+                "--arch=#{arch} wheezy #{broot} #{repos[base_repo][:url]}"
           debootsrap = ShellCmd.new cmd, {
             :tag => "debootstrap",
             :show_out => true
@@ -102,7 +125,7 @@ module Dr
 
           log :info, "Configuring the build root"
 
-          repo_setup_sequences = @repos.map do |name, repo|
+          repo_setup_sequences = repos.map do |name, repo|
             seq = "echo 'deb #{repo[:url]} #{repo[:codename]} " +
                   "#{repo[:components]}' >> /etc/apt/sources.list\n"
 

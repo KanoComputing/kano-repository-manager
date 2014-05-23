@@ -10,6 +10,7 @@ require "io/console"
 require "dr/repo"
 require "dr/gitpackage"
 require "dr/debpackage"
+require "dr/buildroot"
 
 require "dr/shellcmd"
 require "dr/logger"
@@ -165,6 +166,7 @@ class RepoCLI < ExtendedThor
       :arches => ["amd64"],
       :components => ["main"],
       :suites => ["stable", "testing", "unstable"],
+      :base => "Kano OS",
       :codenames => []
     }
 
@@ -173,6 +175,15 @@ class RepoCLI < ExtendedThor
 
     desc = ask "   Description [#{repo_conf[:desc]}]:"
     repo_conf[:desc] = desc if desc.length > 0
+
+    puts "   Base OS [pick one from 1-#{Dr::BuildRoot.os_bases.length}]: "
+    Dr::BuildRoot.os_bases.each_with_index do |base, index|
+      base_name, base_params = base
+      base_name = base_name.fg "yellow" if base_name == repo_conf[:base]
+      puts "     [#{index+1}] #{base_name}"
+    end
+    base = ask "   Your choice: "
+    repo_conf[:base] = base if base.length > 0
 
     arches = ask "   Architectures [#{repo_conf[:arches].join(" ").fg("yellow")}]:"
     repo_conf[:arches] = arches.split(/\s+/) if arches.length > 0
