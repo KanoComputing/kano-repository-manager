@@ -346,8 +346,19 @@ class RepoCLI < ExtendedThor
     repo = get_repo_handle
 
     log :info, "Releasing all packages from testing"
-    repo.list_packages.each do |pkg|
-      repo.push pkg.name, nil, "stable", (options["force"] == true)
+    repo.list_packages("testing").each do |pkg|
+      begin
+        repo.push pkg.name, nil, "stable", (options["force"] == true)
+      rescue Dr::AlreadyExists
+        ;
+      end
+    end
+
+    log :info, "Removing packages that are not in testing any more"
+    repo.list_packages("release").each do |pkg|
+      if ! repo.suite_has_package? "testing", pkg.name
+        repo.unpush pkg.name, "release"
+      end
     end
   end
 
@@ -377,6 +388,6 @@ end
 
 begin
  RepoCLI.start ARGV
-rescue Exception => e
+rescue StandardError => e
   Dr::Logger.log :err, e.to_s
 end

@@ -13,6 +13,8 @@ require "fileutils"
 require "yaml"
 
 module Dr
+  class AlreadyExists < StandardError; end
+
   class Repo
     include Logger
 
@@ -153,6 +155,12 @@ module Dr
       v
     end
 
+    def suite_has_package?(suite, pkg_name)
+      pkg_versions = get_subpackage_versions(pkg_name)[codename_to_suite(suite)]
+
+      pkg_versions.length > 0
+    end
+
     def suite_has_higher_pkg_version?(suite, pkg, version)
       used_versions = get_subpackage_versions(pkg.name)[codename_to_suite(suite)]
 
@@ -231,10 +239,12 @@ module Dr
           reprepro = "reprepro -b #{@location}/archive " +
                      "--gnupghome #{location}/gnupg-keyring/ removesrc " +
                      "#{suite} #{pkg.name}"
-          ShellCmd.new reprepro, :tag => "reprepro", :show_out => true
+          ShellCmd.new reprepro, :tag => "reprepro", :show_out => false
         else
-          log :err, "The same package of a higher version is already in the repo."
-          raise "Push failed"
+          log :warn, "The same package of a higher version is already in the " +
+                     "#{suite} suite."
+
+          raise AlreadyExists.new "Push failed"
         end
       end
 
