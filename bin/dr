@@ -176,14 +176,24 @@ class RepoCLI < ExtendedThor
     desc = ask "   Description [#{repo_conf[:desc]}]:"
     repo_conf[:desc] = desc if desc.length > 0
 
-    puts "   Base OS [pick one from 1-#{Dr::BuildRoot.os_bases.length}]: "
+    base_map = {}
+    puts "   Base OS [pick one]: "
     Dr::BuildRoot.os_bases.each_with_index do |base, index|
       base_name, base_params = base
+      base_map[index+1] = base_name
+
       base_name = base_name.fg "yellow" if base_name == repo_conf[:base]
       puts "     [#{index+1}] #{base_name}"
     end
+
     base = ask "   Your choice: "
-    repo_conf[:base] = base if base.length > 0
+    until base.length == 0 || base_map.has_key?(base.to_i)
+      base = ask "   Your choice: "
+    end
+    repo_conf[:base] = base_map[base.to_i] if base.length > 0
+
+    # guess default arch
+    repo_conf[:arches] = [Dr::BuildRoot.os_bases[repo_conf[:base]][:arches][0]]
 
     arches = ask "   Architectures [#{repo_conf[:arches].join(" ").fg("yellow")}]:"
     repo_conf[:arches] = arches.split(/\s+/) if arches.length > 0
@@ -397,8 +407,8 @@ class RepoCLI < ExtendedThor
   end
 end
 
-begin
- RepoCLI.start ARGV
-rescue StandardError => e
-  Dr::Logger.log :err, e.to_s
-end
+#begin
+  RepoCLI.start ARGV
+#rescue StandardError => e
+#  Dr::Logger.log :err, e.to_s
+#end
