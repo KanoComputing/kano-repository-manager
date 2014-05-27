@@ -51,7 +51,7 @@ module Dr
 
       @essential_pkgs = "sudo,vim,ca-certificates,fakeroot,build-essential," +
                         "curl,devscripts,debhelper,git,bc,locales,equivs," +
-                        "pkg-config"
+                        "pkg-config,libfile-fcntllock-perl"
 
       if br_archive == nil || !File.exists?(br_archive)
         setup base, arch
