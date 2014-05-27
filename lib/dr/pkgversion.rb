@@ -66,7 +66,13 @@ module Dr
         v << ".#{today}"
       end
 
-      v << "build#{@build}" if @build > 0
+      if @build > 0
+        if @build < 10
+          v << "build0#{@build}"
+        else
+          v << "build#{@build}"
+        end
+      end
 
       v
     end
