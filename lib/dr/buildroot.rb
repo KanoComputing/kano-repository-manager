@@ -46,21 +46,23 @@ module Dr
       @@os_bases
     end
 
-    def initialize(base, arch, br_archive=nil)
-      @location = br_archive
+    def initialize(base, arch, br_cache)
+      @location = "#{br_cache}/#{base.strip.downcase.gsub(" ", "_")}-#{arch}.tar.gz"
+      @base = base
+      @arch = arch
 
       @essential_pkgs = "sudo,vim,ca-certificates,fakeroot,build-essential," +
                         "curl,devscripts,debhelper,git,bc,locales,equivs," +
                         "pkg-config,libfile-fcntllock-perl"
 
-      if br_archive == nil || !File.exists?(br_archive)
+      if !File.exists?(@location)
         setup base, arch
       end
     end
 
     def open
       Dir.mktmpdir do |tmp|
-        log :info, "Preparing the build root"
+        log :info, "Preparing #{@base.fg "blue"} #{@arch.fg "orange"} build root"
         ShellCmd.new "sudo tar xz -C #{tmp} -f #{@location}", :tag => "tar"
         begin
           log :info, "Mounting the /proc file system"

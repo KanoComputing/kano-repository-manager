@@ -24,6 +24,9 @@ module Dr
       @location = File.expand_path loc
 
       @packages_dir = "#{@location}/packages"
+
+      meta = "#{@location}/metadata"
+      @metadata = File.exists?(meta) ? YAML.load_file(meta) : {}
     end
 
     def setup(conf)
@@ -70,10 +73,15 @@ module Dr
       end
 
       FileUtils.mkdir_p @packages_dir
+      FileUtils.mkdir_p "#{@location}/buildroots"
+
+      @metadata = {"base-os" => conf[:base]}
+      File.open("#{@location}/metadata", "w" ) do |out|
+        YAML.dump(@metadata)
+      end
 
       conf[:arches].each do |arch|
-        broot_loc = "#{@location}/build-root-#{arch}.tar.gz"
-        BuildRoot.new conf[:base], arch, broot_loc
+        buildroot arch
       end
     end
 
@@ -99,7 +107,8 @@ module Dr
     end
 
     def buildroot(arch)
-      BuildRoot.new arch, "#{@location}/build-root-#{arch}.tar.gz"
+      cache_dir = "#{@location}/buildroots/"
+      BuildRoot.new @metadata["base-os"], arch, cache_dir
     end
 
     def get_package(name)

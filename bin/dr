@@ -407,8 +407,8 @@ class RepoCLI < ExtendedThor
   end
 end
 
-#begin
-  RepoCLI.start ARGV
-#rescue StandardError => e
-#  Dr::Logger.log :err, e.to_s
-#end
+begin
+ RepoCLI.start ARGV
+rescue StandardError => e
+  Dr::Logger.log :err, e.to_s
+end
