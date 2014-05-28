@@ -368,8 +368,9 @@ class RepoCLI < ExtendedThor
 
     log :info, "Releasing all packages from testing"
     repo.list_packages("testing").each do |pkg|
+      v = repo.get_subpackage_versions(pkg.name)["testing"].values
       begin
-        repo.push pkg.name, nil, "stable", (options["force"] == true)
+        repo.push pkg.name, v.max, "stable", (options["force"] == true)
       rescue Dr::AlreadyExists
         ;
       end
