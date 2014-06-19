@@ -7,6 +7,7 @@ require "thor"
 require "fileutils"
 require "io/console"
 
+require "dr"
 require "dr/repo"
 require "dr/gitpackage"
 require "dr/debpackage"
@@ -409,7 +410,14 @@ class RepoCLI < ExtendedThor
 end
 
 begin
- RepoCLI.start ARGV
+  Dr::check_dependencies [
+    "git", "reprepro", "gzip", "debuild",
+    "debootstrap", "qemu-*-static", "chroot",
+    "curl", "gpg", "tar", "dpkg", "dpkg-deb",
+    "dpkg-sig", "rm"
+  ]
+
+  RepoCLI.start ARGV
 rescue StandardError => e
   Dr::Logger.log :err, e.to_s
 end
