@@ -196,8 +196,24 @@ class RepoCLI < ExtendedThor
     # guess default arch
     repo_conf[:arches] = [Dr::BuildRoot.os_bases[repo_conf[:base]][:arches][0]]
 
-    arches = ask "   Architectures [#{repo_conf[:arches].join(" ").fg("yellow")}]:"
-    repo_conf[:arches] = arches.split(/\s+/) if arches.length > 0
+    while true
+      str = ask "   Architectures [#{repo_conf[:arches].join(" ").fg("yellow")}]:"
+      break if str.length == 0
+
+      arches = str.split(/\s+/)
+      arches_valid = arches.reduce(true) do |acc, arch|
+        supported = Dr::BuildRoot.os_bases[repo_conf[:base]][:arches].include?(arch)
+        if !supported
+          puts "     " + "#{arch.fg "yellow"}" + " not supported by the base system"
+        end
+
+        supported
+      end
+      next if !arches_valid
+
+      repo_conf[:arches] = arches
+      break
+    end
 
     components = ask "   Components [#{repo_conf[:components].join(" ").fg("yellow")}]:"
     repo_conf[:components] = components.split /\s+/ if components.length > 0

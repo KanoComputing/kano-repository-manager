@@ -31,7 +31,6 @@ module Dr
 
     def setup(conf)
       log :info, "Creating the archive directory"
-
       begin
         FileUtils.mkdir_p location
       rescue Exception => e
