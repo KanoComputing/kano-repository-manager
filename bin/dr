@@ -377,6 +377,40 @@ class RepoCLI < ExtendedThor
     log :info, "Updated #{updated.to_s.fg "blue"} packages in #{suite.fg "blue"}"
   end
 
+  desc "git-tag-release", "Mark relased packages' repositories"
+  method_option :force, :aliases => "-f", :type => :boolean,
+                :desc => "Force override existing tags"
+  method_option :package, :aliases => "-p", :type => :string,
+                :desc => "Only tag a single package"
+  method_option :summary, :aliases => "-s", :type => :string,
+                :desc => "A summary for the release (Github only)"
+  method_option :title, :aliases => "-t", :type => :string,
+                :desc => "A title for the release (Github only)"
+  def git_tag_release(tag)
+    repo = get_repo_handle
+
+    packages = if options["package"] == nil
+      repo.list_packages "stable"
+    else
+      if repo.get_subpackage_versions(options["package"])["stable"].empty?
+        log :warn, "This package isn't in the #{"stable".fg "green"} branch, skipping."
+      end
+
+      [repo.get_package(options["package"])]
+    end
+
+    packages.each do |pkg|
+      if pkg.is_a? Dr::GitPackage
+        version = repo.get_subpackage_versions(pkg.name)["stable"].values.max
+        bm = repo.get_build_metadata pkg.name, version
+
+        pkg.tag_release tag, bm["revision"], options
+      else
+        log :info, "#{pkg.name.style "pkg-name"} is not associated with a git repo, skipping"
+      end
+    end
+  end
+
   desc "release", "Push all the packages from testing to release"
   method_option :force, :aliases => "-f", :type => :boolean,
                 :desc => "Force-push all released packages"

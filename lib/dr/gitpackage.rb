@@ -6,6 +6,7 @@ require "dr/pkgversion"
 require "dr/shellcmd"
 
 require "yaml"
+require "octokit"
 
 module Dr
   class GitPackage < Package
@@ -250,6 +251,55 @@ EOS
       version
     end
 
+    def tag_release(tag_name, revision, options={})
+      url = get_repo_url
+
+      log :info, "Tagging #{@name.style "pkg-name"} package for " +
+                 "#{tag_name.fg "yellow"} release"
+
+      gh_repo = case url
+        when /git\@github.com\:/i then url.split(":")[1].gsub(/\.git$/, "").strip
+        when /github.com\//i then url.split("/")[-2..-1].join("/").gsub(/\.git$/, "").strip
+        else nil
+      end
+
+      if gh_repo == nil
+        git_cmd = "git --git-dir #{@git_dir} tag #{tag}"
+        git = ShellCmd.new git_cmd,
+          :tag => "git",
+          :show_out => false,
+          :raise_on_error => false
+
+        if git.status == 128
+          log :warn, "Tag #{tag_name.fg "yellow"} already exists."
+          return
+        end
+
+        git_cmd = "git --git-dir #{@git_dir} push origin --tags"
+        git = ShellCmd.new git_cmd, :show_out => false
+
+        return
+      end
+
+      title = options["title"] || "Kano OS #{tag_name}"
+      summary = options["summary"] || "https://github.com/KanoComputing/peldins/wiki/Changelog-#{tag_name}"
+
+      token = ENV["GITHUB_API_TOKEN"]
+      client = Octokit::Client.new :access_token => token
+
+      releases = client.releases gh_repo
+      ri = releases.index { |r| r[:tag_name] == tag_name }
+
+      if ri == nil
+        client.create_release gh_repo, tag_name,
+          :target_commitish => revision,
+          :name => title,
+          :body => summary
+      else
+        log :warn, "The #{tag_name.fg "yellow"} release exists already for #{@name.style "pkg-name"}."
+      end
+    end
+
     private
     def update_from_origin(branch)
       log :info, "Pulling changes from origin"
@@ -267,6 +317,12 @@ EOS
       current_rev = get_rev branch
 
       [original_rev, current_rev]
+    end
+
+    def get_repo_url
+      git_cmd = "git --git-dir #{@git_dir} config --get remote.origin.url"
+      git = ShellCmd.new git_cmd, :tag => "git"
+      git.out
     end
 
     def get_version(changelog_file)
@@ -303,12 +359,6 @@ EOS
       end
 
       arches.uniq
-    end
-
-    def get_repo_url
-      git_cmd = "git --git-dir #{@git_dir} --bare remote show origin -n"
-      git = ShellCmd.new git_cmd, :tag => "git"
-      git.out.lines.grep(/Fetch URL/)[0].chomp[13..-1]
     end
 
     def get_current_branch
