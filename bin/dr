@@ -458,7 +458,7 @@ class RepoCLI < ExtendedThor
   end
 end
 
-#begin
+begin
   Dr::check_dependencies [
     "git", "reprepro", "gzip", "debuild", "debootstrap", "qemu-*-static",
     "chroot", "curl", "gpg", "tar", "dpkg", "dpkg-deb", "dpkg-sig", "rm",
@@ -466,6 +466,6 @@ end
   ]
 
   RepoCLI.start ARGV
-#rescue StandardError => e
+rescue StandardError => e
   Dr::Logger.log :err, e.to_s
-#end
+end
