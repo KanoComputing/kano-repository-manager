@@ -7,7 +7,8 @@ require "dr/logger"
 
 module Dr
   def self.check_dependencies(deps=[])
-    ENV["PATH"].split(File::PATH_SEPARATOR).each do |path_dir|
+    # TODO: /usr/sbin is hacked in because we're using sudo
+    (ENV["PATH"].split(File::PATH_SEPARATOR) + ["/usr/sbin/"]).each do |path_dir|
       deps.delete_if do |dep_name|
         Dir[File.join(path_dir, dep_name)].length > 0
       end
