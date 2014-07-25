@@ -5,46 +5,11 @@ require "tco"
 
 require "dr/logger"
 require "dr/shellcmd"
+require "dr/config"
 
 module Dr
   class BuildRoot
     include Logger
-
-    @@os_bases = {
-      "Kano OS" => {
-        :arches => ["armhf", "armel"],
-        :repos => {
-          :raspbian => {
-            :url => "http://mirror.ox.ac.uk/sites/archive.raspbian.org/archive/raspbian/",
-            :key => "http://mirror.ox.ac.uk/sites/archive.raspbian.org/archive/raspbian.public.key",
-            :src => true,
-            :codename => "wheezy",
-            :components => "main contrib non-free rpi"
-          },
-
-          :raspi_foundation => {
-            :url => "http://archive.raspberrypi.org/debian/",
-            :key => "http://archive.raspberrypi.org/debian/raspberrypi.gpg.key",
-            :src => false,
-            :codename => "wheezy",
-            :components => "main"
-          },
-
-          :kano => {
-            :url => "http://dev.kano.me/archive/",
-            :key => "http://dev.kano.me/archive/repo.gpg.key",
-            :src => false,
-            :codename => "devel",
-            :components => "main"
-          }
-        },
-        :base => :raspbian,
-        :packages => []
-      }
-    }
-    def self.os_bases
-      @@os_bases
-    end
 
     def initialize(base, arch, br_cache)
       @location = "#{br_cache}/#{base.strip.downcase.gsub(" ", "_")}-#{arch}.tar.gz"
@@ -82,17 +47,17 @@ module Dr
 
     private
     def setup(base, arch)
-      unless @@os_bases.include? base
-        raise "OS base #{base.fg "blue"} isn't supported by dr."
+      unless Dr.config.distros.include? base
+        raise "Sorry, OS base #{base.fg "blue"} isn't supported by dr."
       end
 
-      unless @@os_bases[base][:arches].include? arch
+      unless Dr.config.distros[base][:arches].include? arch
         raise "Arch #{arch.fg "blue"} not supported by this base."
       end
 
-      repos = @@os_bases[base][:repos]
-      base_repo = @@os_bases[base][:base].to_sym
-      additional_pkgs = @@os_bases[base][:packages].join ","
+      repos = Dr.config.distros[base][:repos]
+      base_repo = Dr.config.distros[base][:base_repo].to_sym
+      additional_pkgs = Dr.config.distros[base][:packages].join ","
 
       Dir.mktmpdir do |tmp|
         broot = "#{tmp}/broot"

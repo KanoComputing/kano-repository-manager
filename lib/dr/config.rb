@@ -3,9 +3,13 @@
 
 require "yaml"
 
+require "dr/distros"
+
 module Dr
   class Config
     attr_reader :default_repo, :repositories
+
+    include Distros
 
     def initialize(locations)
       @default_repo = nil
@@ -42,6 +46,18 @@ module Dr
           raise "Default repo #{@default_repo} doesn't exist"
         end
       end
+
+      if conf_file.has_key? "distros"
+        conf_file["distros"].each do |name, distro|
+          distro_sym_keys = distro.inject({}) { |memo,(k,v)| memo[k.to_sym] = v; memo }
+          add_distro(name, distro_sym_keys)
+        end
+      end
     end
+  end
+
+  @config = Config.new ["/etc/dr.conf", "~/.dr.conf"]
+  def self.config
+    @config
   end
 end

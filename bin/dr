@@ -22,15 +22,11 @@ class ExtendedThor < Thor
   include Dr::Logger
 
   def get_repo_handle
-    unless @conf
-      @conf = Dr::Config.new ["/etc/dr.conf", "~/.dr.conf"]
-    end
-
     if options.has_key? "repo"
       Dr::Repo.new options["repo"]
     else
-      if @conf.default_repo != nil
-        Dr::Repo.new @conf.repositories[@conf.default_repo][:location]
+      if Dr.config.default_repo != nil
+        Dr::Repo.new Dr.config.repositories[Dr.config.default_repo][:location]
       else
         log :warn, "No repo was specified, using '#{Dir.pwd}'."
         Dr::Repo.new Dir.pwd
@@ -167,7 +163,7 @@ class RepoCLI < ExtendedThor
       :arches => ["amd64"],
       :components => ["main"],
       :suites => ["stable", "testing", "unstable"],
-      :base => "Kano OS",
+      :distro => "Kano OS",
       :codenames => []
     }
 
@@ -177,24 +173,27 @@ class RepoCLI < ExtendedThor
     desc = ask "   Description [#{repo_conf[:desc]}]:"
     repo_conf[:desc] = desc if desc.length > 0
 
-    base_map = {}
-    puts "   Base OS [pick one]: "
-    Dr::BuildRoot.os_bases.each_with_index do |base, index|
-      base_name, base_params = base
-      base_map[index+1] = base_name
+    distro_map = {}
+    puts "   Distribution [pick one]: "
+    Dr::config.distros.each_with_index do |distro, index|
+      distro_name, distro_params = distro
+      distro_map[index+1] = distro_name
 
-      base_name = base_name.fg "yellow" if base_name == repo_conf[:base]
-      puts "     [#{index+1}] #{base_name}"
+      distro_name = distro_name.fg "yellow" if distro_name == repo_conf[:distro]
+      puts "     [#{index+1}] #{distro_name}"
     end
 
-    base = ask "   Your choice: "
-    until base.length == 0 || base_map.has_key?(base.to_i)
-      base = ask "   Your choice: "
+    distro = ask "   Your choice: "
+    until distro.length == 0 || distro_map.has_key?(distro.to_i)
+      distro = ask "   Your choice: "
     end
-    repo_conf[:base] = base_map[base.to_i] if base.length > 0
+    repo_conf[:distro] = distro_map[distro.to_i] if distro.length > 0
 
+    require 'pp'
     # guess default arch
-    repo_conf[:arches] = [Dr::BuildRoot.os_bases[repo_conf[:base]][:arches][0]]
+    pp Dr::config.distros
+    pp Dr::config.distros[repo_conf[:distro]]
+    repo_conf[:arches] = [Dr::config.distros[repo_conf[:distro]][:arches][0]]
 
     while true
       str = ask "   Architectures [#{repo_conf[:arches].join(" ").fg("yellow")}]:"
@@ -202,9 +201,9 @@ class RepoCLI < ExtendedThor
 
       arches = str.split(/\s+/)
       arches_valid = arches.reduce(true) do |acc, arch|
-        supported = Dr::BuildRoot.os_bases[repo_conf[:base]][:arches].include?(arch)
+        supported = Dr::config.distros[repo_conf[:distro]][:arches].include?(arch)
         if !supported
-          puts "     " + "#{arch.fg "yellow"}" + " not supported by the base system"
+          puts "     " + "#{arch.fg "yellow"}" + " not supported by the distro"
         end
 
         supported
@@ -459,15 +458,14 @@ class RepoCLI < ExtendedThor
   end
 end
 
-begin
+#begin
   Dr::check_dependencies [
-    "git", "reprepro", "gzip", "debuild",
-    "debootstrap", "qemu-*-static", "chroot",
-    "curl", "gpg", "tar", "dpkg", "dpkg-deb",
-    "dpkg-sig", "rm"
+    "git", "reprepro", "gzip", "debuild", "debootstrap", "qemu-*-static",
+    "chroot", "curl", "gpg", "tar", "dpkg", "dpkg-deb", "dpkg-sig", "rm",
+    "sudo"
   ]
 
   RepoCLI.start ARGV
-rescue StandardError => e
+#rescue StandardError => e
   Dr::Logger.log :err, e.to_s
-end
+#end
