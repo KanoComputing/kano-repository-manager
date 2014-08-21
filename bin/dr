@@ -86,7 +86,7 @@ class List < ExtendedThor
           line << " " + open + metadata["branch"].fg("blue") + close
         end
 
-        subpkgs = debs.map { |p| subpkg = File.basename(p).split("_")[0] }
+        subpkgs = debs.map { |p| File.basename(p).split("_")[0] }
       end
 
       open = "[".fg "dark-grey"
@@ -183,7 +183,7 @@ class RepoCLI < ExtendedThor
     distro_map = {}
     puts "   Distribution [pick one]: "
     Dr::config.distros.each_with_index do |distro, index|
-      distro_name, distro_params = distro
+      distro_name = distro[0]
       distro_map[index+1] = distro_name
 
       distro_name = distro_name.fg "yellow" if distro_name == repo_conf[:distro]
@@ -222,7 +222,7 @@ class RepoCLI < ExtendedThor
     end
 
     components = ask "   Components [#{repo_conf[:components].join(" ").fg("yellow")}]:"
-    repo_conf[:components] = components.split /\s+/ if components.length > 0
+    repo_conf[:components] = components.split(/\s+/) if components.length > 0
 
     repo_conf[:gpg_name] = ""
     while repo_conf[:gpg_name].length == 0
