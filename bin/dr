@@ -17,6 +17,7 @@ require "dr/shellcmd"
 require "dr/logger"
 require "dr/config"
 
+
 class ExtendedThor < Thor
   private
   include Dr::Logger
@@ -35,6 +36,7 @@ class ExtendedThor < Thor
   end
 end
 
+
 class Archive < ExtendedThor
   #desc "save TAG", "make a snapshot of the current archive"
   #def save(tag)
@@ -50,6 +52,7 @@ class Archive < ExtendedThor
   #end
 end
 
+
 class List < ExtendedThor
   desc "packages", "Show a list of source packages in the repo"
   def packages()
@@ -60,6 +63,7 @@ class List < ExtendedThor
       log :info, "  #{pkg.name.fg "orange"}"
     end
   end
+
 
   desc "versions PACKAGE", "Show the history of all available versions for a package"
   def versions(pkg_name)
@@ -120,6 +124,7 @@ class List < ExtendedThor
     end
   end
 
+
   desc "suite SUITE", "Show the names and versions of packages in the suite"
   def suite(suite)
     repo = get_repo_handle
@@ -150,8 +155,10 @@ class List < ExtendedThor
   end
 end
 
+
 class RepoCLI < ExtendedThor
   class_option :repo, :type => :string, :aliases => "-r"
+
 
   desc "init [LOCATION]", "setup a whole new repository from scratch"
   def init(location=".")
@@ -242,6 +249,7 @@ class RepoCLI < ExtendedThor
     r.setup repo_conf
   end
 
+
   desc "add", "introduce a new package to the build system"
   method_option :git, :aliases => "-g",
     :desc => "Add source package managed in a git repo"
@@ -266,6 +274,7 @@ class RepoCLI < ExtendedThor
       raise ArgumentError, "Either --git or --deb must be specified"
     end
   end
+
 
   desc "build [pkg-name]", "build a package from the sources"
   method_option :branch, :aliases => "-b", :type => :string,
@@ -300,6 +309,7 @@ class RepoCLI < ExtendedThor
     end
   end
 
+
   desc "push [pkg-name]", "push a built package to a specified suite"
   method_option :suite, :aliases => "-s", :type => :string,
                 :desc => "the target suite (defaults to testing)"
@@ -319,11 +329,13 @@ class RepoCLI < ExtendedThor
     repo.push pkg_name, version, suite, options["force"] == true
   end
 
+
   desc "unpush [pkg-name] [suite]", "remove a built package from a suite"
   def unpush(pkg_name, suite)
     repo = get_repo_handle
     repo.unpush pkg_name, suite
   end
+
 
   desc "list SUBCOMMAND [ARGS]", "show information about packages"
   map "l" => :list, "ls" => :list
@@ -336,6 +348,7 @@ class RepoCLI < ExtendedThor
     repo = get_repo_handle
     repo.remove pkg_name, options["force"] == true
   end
+
 
   desc "rmbuild [pkg-name] [version]", "remove a built version of a package"
   method_option :force, :aliases => "-f", :type => :boolean,
@@ -376,6 +389,7 @@ class RepoCLI < ExtendedThor
     log :info, "Updated #{updated.to_s.fg "blue"} packages in #{suite.fg "blue"}"
   end
 
+
   desc "git-tag-release", "Mark relased packages' repositories"
   method_option :force, :aliases => "-f", :type => :boolean,
                 :desc => "Force override existing tags"
@@ -410,6 +424,7 @@ class RepoCLI < ExtendedThor
     end
   end
 
+
   desc "release", "Push all the packages from testing to release"
   method_option :force, :aliases => "-f", :type => :boolean,
                 :desc => "Force-push all released packages"
@@ -434,6 +449,7 @@ class RepoCLI < ExtendedThor
     end
   end
 
+
   desc "force-sync", "Force cloning the sources repository from scratch again"
   def force_sync(pkg_name)
     repo = get_repo_handle
@@ -457,6 +473,7 @@ class RepoCLI < ExtendedThor
     end
   end
 end
+
 
 begin
   Dr::check_dependencies [
