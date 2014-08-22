@@ -73,30 +73,55 @@ Tco::reconfigure tco_conf
 
 module Dr
   module Logger
-    @@logger_options = {
+    @@message_types = {
       :info => "info",
       :warn => "warn",
       :err  => "err",
       :debug => "debug"
     }
 
-    def self.log(level, msg)
-      out = "dr".style("log-head") << " "
+    @@verbosity = :verbose
+    @@logger_verbosity_levels = {
+      :essential => 0,
+      :important => 1,
+      :informative => 2,
+      :verbose => 3
+    }
 
-      case level
-      when :info  then out << "info".style(@@logger_options[:info])
-      when :warn  then out << "WARN".style(@@logger_options[:warn])
-      when :err   then out << "ERR!".style(@@logger_options[:err])
-      when :debug then out << "dbg?".style(@@logger_options[:debug])
-      end
+    def self.set_verbosity(level)
+      msg = "Message verbosity level not recognised (#{})."
+      raise msg unless @@logger_verbosity_levels.has_key? level.to_sym
 
-      out << " " << msg.chomp
-      puts out
-      STDOUT.flush
+      @@verbosity = level.to_sym
     end
 
-    def log(level, msg)
-      Logger::log level, msg
+    def self.log(msg_type, msg, verbosity=nil)
+      out = "dr".style("log-head") << " "
+
+      case msg_type
+      when :info
+        out << "info".style(@@message_types[:info])
+        verbosity = :informative unless verbosity
+      when :warn
+        out << "WARN".style(@@message_types[:warn])
+        verbosity = :informative unless verbosity
+      when :err
+        out << "ERR!".style(@@message_types[:err])
+        verbosity = :essential unless verbosity
+      when :debug
+        out << "dbg?".style(@@message_types[:debug])
+        verbosity = :verbose unless verbosity
+      end
+
+      if verbosity <= @@verbosity
+        out << " " << msg.chomp
+        puts out
+        STDOUT.flush
+      end
+    end
+
+    def log(msg_type, msg)
+      Logger::log msg_type, msg
     end
 
     def tag(tag, msg)

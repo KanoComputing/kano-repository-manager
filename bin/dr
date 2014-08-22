@@ -22,6 +22,13 @@ class ExtendedThor < Thor
   private
   include Dr::Logger
 
+
+  def initialize(*args)
+    super
+    Dr::Logger::set_verbosity options[:verbosity]
+  end
+
+
   def get_repo_handle
     if options.has_key? "repo"
       Dr::Repo.new options["repo"]
@@ -158,6 +165,7 @@ end
 
 class RepoCLI < ExtendedThor
   class_option :repo, :type => :string, :aliases => "-r"
+  class_option :verbosity, :type => :string, :aliases => "-v", :default => "verbose"
 
 
   desc "init [LOCATION]", "setup a whole new repository from scratch"
