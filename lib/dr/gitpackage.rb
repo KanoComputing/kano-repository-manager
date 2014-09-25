@@ -185,7 +185,10 @@ module Dr
             FileUtils.cp_r src_dir, build_dir
 
             # Make orig tarball
-            files = Dir["#{build_dir}/*"].map { |f| "\"#{File.basename f}\"" }.join " "
+            all_files = Dir["#{build_dir}/*"] + Dir["#{build_dir}/.*"]
+            excluded_files = ['.', '..', '.git']
+            selected_files = all_files.select { |path| !excluded_files.include?(File.basename(path)) }
+            files = selected_files.map { |f| "\"#{File.basename f}\"" }.join " "
             log :info, "Creating orig source tarball"
             tar = "tar cz -C #{build_dir} --exclude=debian " +
                   "-f #{br}/#{@name}_#{version.upstream}.orig.tar.gz " +
