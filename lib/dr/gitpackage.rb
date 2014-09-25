@@ -322,7 +322,7 @@ EOS
     def get_repo_url
       git_cmd = "git --git-dir #{@git_dir} config --get remote.origin.url"
       git = ShellCmd.new git_cmd, :tag => "git"
-      git.out
+      git.out.strip
     end
 
     def get_version(changelog_file)
