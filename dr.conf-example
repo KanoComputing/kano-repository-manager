@@ -9,3 +9,18 @@ repositories:
 
   - name: "sandbox"
     location: "/path/to/the/sandbox/repo"
+
+build_environments:
+  basic_wheezy:
+    name: "Test Build Environment"
+    arches: [armhf, x86_64]
+    repos:
+      wheezy:
+        url: "http://ftp.uk.debian.org/debian/"
+        key: "https://ftp-master.debian.org/keys/archive-key-7.0.asc"
+        src: false
+        codename: wheezy
+        components: main nonfree
+    base_repo: wheezy
+    packages: []
+

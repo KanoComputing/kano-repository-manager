@@ -178,7 +178,7 @@ class RepoCLI < ExtendedThor
       :arches => ["amd64"],
       :components => ["main"],
       :suites => ["stable", "testing", "unstable"],
-      :distro => "Kano OS",
+      :build_environment => :kano,
       :codenames => []
     }
 
@@ -188,40 +188,40 @@ class RepoCLI < ExtendedThor
     desc = ask "   Description [#{repo_conf[:desc]}]:"
     repo_conf[:desc] = desc if desc.length > 0
 
-    distro_map = {}
-    puts "   Distribution [pick one]: "
-    Dr::config.distros.each_with_index do |distro, index|
-      distro_name = distro[0]
-      distro_map[index+1] = distro_name
-
-      distro_name = distro_name.fg "yellow" if distro_name == repo_conf[:distro]
-      puts "     [#{index+1}] #{distro_name}"
+    puts "   Default build environment [pick one]: "
+    Dr::config.build_environments.each do |id, benv|
+      puts "     [#{id.to_s.fg "blue"}] #{benv[:name]}"
     end
 
-    distro = ask "   Your choice: "
-    until distro.length == 0 || distro_map.has_key?(distro.to_i)
-      distro = ask "   Your choice: "
+    benv = nil
+    loop do
+      benv_str = ask "   Your choice [#{repo_conf[:build_environment].to_s.fg "yellow"}]:"
+      benv = benv_str.to_sym
+      break if Dr::config.build_environments.has_key? benv_str.to_sym
     end
-    repo_conf[:distro] = distro_map[distro.to_i] if distro.length > 0
+    repo_conf[:build_environment] = benv
 
+    # guess repo arches
     require 'pp'
-    # guess default arch
-    pp Dr::config.distros
-    pp Dr::config.distros[repo_conf[:distro]]
-    repo_conf[:arches] = [Dr::config.distros[repo_conf[:distro]][:arches][0]]
+    pp repo_conf[:build_environment]
+    repo_conf[:arches] = Dr::config.build_environments[benv][:arches]
 
-    while true
+    loop do
       str = ask "   Architectures [#{repo_conf[:arches].join(" ").fg("yellow")}]:"
       break if str.length == 0
 
+      # Determine the available architectures
+      avail = Dr.config.build_environments[benv][:arches]
+
       arches = str.split(/\s+/)
       arches_valid = arches.reduce(true) do |acc, arch|
-        supported = Dr::config.distros[repo_conf[:distro]][:arches].include?(arch)
-        if !supported
-          puts "     " + "#{arch.fg "yellow"}" + " not supported by the distro"
+        if !avail.include?(arch)
+          puts "     " + "#{arch.fg "yellow"}" +
+               " not supported by the build environments you selected"
+          acc = false
         end
 
-        supported
+        acc
       end
       next if !arches_valid
 
@@ -493,4 +493,7 @@ begin
   RepoCLI.start ARGV
 rescue StandardError => e
   Dr::Logger.log :err, e.to_s
+  e.backtrace.each do |line|
+    Dr::Logger.log :err, line
+  end
 end

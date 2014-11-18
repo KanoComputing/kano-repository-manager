@@ -3,8 +3,8 @@
 
 
 module Dr
-  module Distros
-    @@distros = {
+  module BuildEnv
+    @@build_environments = {
       "Kano OS" => {
         :arches => ["armhf", "armel"],
         :repos => {
@@ -37,12 +37,12 @@ module Dr
       }
     }
 
-    def distros
-      @@distros
+    def build_environments
+      @@build_environments
     end
 
-    def add_distro(name, distro)
-      @@distros[name] = distro
+    def add_build_environment(name, benv)
+      @@build_environments[name] = benv
     end
   end
 end

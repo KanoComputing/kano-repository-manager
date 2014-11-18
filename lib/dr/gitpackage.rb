@@ -117,6 +117,15 @@ module Dr
       end
     end
 
+    def get_source_metadata
+      md_file = "#{@repo.location}/packages/#{@name}/metadata"
+      if File.exists? md_file
+        YAML.load_file md_file
+      else
+        {}
+      end
+    end
+
     def build(branch=nil, force=false)
       branch = @default_branch unless branch
 
@@ -168,14 +177,28 @@ module Dr
         repo_arches = @repo.get_architectures
         pkg_arches = get_architectures("#{src_dir}/debian/control")
         arches = case
-          when pkg_arches.include?("any") || pkg_arches.include?("all")
+          when pkg_arches.include?("any")
             repo_arches
+          when pkg_arches.include?("all")
+            ["all"]
           else
             repo_arches & pkg_arches
           end
 
+        if repo_arches.length == 0
+          log :error, "#{@name.style "pkg-name"} cannot be build for any of " +
+                      "the architectures supported by this repository"
+          raise "Unable to build the package for this repository"
+        end
+
+        benv = :default
+        src_meta = get_source_metadata
+        if src_meta.has_key? :build_environment
+          benv = src_meta[:build_environment]
+        end
+
         arches.each do |arch|
-          @repo.buildroot(arch).open do |br|
+          @repo.buildroot(arch, benv).open do |br|
             log :info, "Building the #{@name.style "pkg-name"} package " +
                        "version #{version.to_s.style "version"} for #{arch}"
 

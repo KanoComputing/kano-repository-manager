@@ -78,13 +78,11 @@ module Dr
       FileUtils.mkdir_p @packages_dir
       FileUtils.mkdir_p "#{@location}/buildroots"
 
-      @metadata = {"distro" => conf[:distro]}
+      @metadata = {
+        :default_build_environment => conf[:build_environment]
+      }
       File.open("#{@location}/metadata", "w" ) do |out|
-        YAML.dump(@metadata)
-      end
-
-      conf[:arches].each do |arch|
-        buildroot arch
+        out.write @metadata.to_yaml
       end
     end
 
@@ -109,9 +107,13 @@ module Dr
       pkgs.sort
     end
 
-    def buildroot(arch)
+    def buildroot(arch, build_env=:default)
+      if build_env == :default
+        build_env = @metadata[:default_build_environment]
+      end
+
       cache_dir = "#{@location}/buildroots/"
-      BuildRoot.new @metadata["distro"], arch, cache_dir
+      BuildRoot.new build_env, arch, cache_dir
     end
 
     def get_package(name)
