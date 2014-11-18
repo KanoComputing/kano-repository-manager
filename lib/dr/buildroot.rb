@@ -152,7 +152,7 @@ EOF"
         }
       end
 
-      log :info, "Bootstrapping Raspian (#{arch} stage)"
+      log :info, "Bootstrapping Raspian (#{@arch} stage)"
       cmd = "sudo chroot #{broot} /debootstrap/debootstrap --second-stage"
       debootstrap = ShellCmd.new cmd, {
         :tag => "debootstrap",
