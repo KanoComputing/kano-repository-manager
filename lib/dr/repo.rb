@@ -8,6 +8,7 @@ require "dr/shellcmd"
 require "dr/logger"
 require "dr/gnupg"
 require "dr/buildroot"
+require "dr/utils"
 
 require "fileutils"
 require "yaml"
@@ -24,13 +25,6 @@ module Dr
       @location = File.expand_path loc
 
       @packages_dir = "#{@location}/packages"
-
-      meta = "#{@location}/metadata"
-      begin
-        @metadata = YAML.load_file(meta)
-      rescue
-        @metadata = {}
-      end
     end
 
     def setup(conf)
@@ -78,11 +72,27 @@ module Dr
       FileUtils.mkdir_p @packages_dir
       FileUtils.mkdir_p "#{@location}/buildroots"
 
-      @metadata = {
-        :default_build_environment => conf[:build_environment]
+      metadata = {
+        "default_build_environment" => conf[:build_environment].to_s
       }
       File.open("#{@location}/metadata", "w" ) do |out|
-        out.write @metadata.to_yaml
+        out.write metadata.to_yaml
+      end
+    end
+
+    def get_configuration
+        meta_file = "#{@location}/metadata"
+        if File.exists? meta_file
+          Utils::symbolise_keys YAML.load_file(meta_file)
+        else
+          {}
+        end
+    end
+
+    def set_configuration(new_metadata)
+      # TODO: Some validation needed
+      File.open("#{@location}/metadata", "w" ) do |out|
+        out.write Utils::stringify_symbols(new_metadata).to_yaml
       end
     end
 
@@ -109,7 +119,7 @@ module Dr
 
     def buildroot(arch, build_env=:default)
       if build_env == :default
-        build_env = @metadata[:default_build_environment]
+        build_env = get_configuration[:default_build_environment].to_sym
       end
 
       cache_dir = "#{@location}/buildroots/"

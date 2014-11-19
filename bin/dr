@@ -59,6 +59,79 @@ class Archive < ExtendedThor
   #end
 end
 
+class Conf < ExtendedThor
+  desc "repo", "Configuration of the whole repository"
+  def repo(key, value=nil)
+    repo = get_repo_handle
+
+    metadata = repo.get_configuration
+
+    if value == nil
+      value = dot_get_value metadata, key
+      puts value if value
+    else
+      repo.set_configuration dot_set_value metadata, key, value
+    end
+  end
+
+  desc "package", "Package-specific configuration options"
+  def package(pkg_name, key, value=nil)
+    repo = get_repo_handle
+    pkg = repo.get_package pkg_name
+
+    metadata = pkg.get_configuration
+
+    if value == nil
+      value = dot_get_value metadata, key
+      puts value if value
+    else
+      pkg.set_configuration dot_set_value metadata, key, value
+    end
+  end
+
+  private
+  def dot_set_value(dict, key, value)
+    levels = key.split(".").map {|l| l.to_sym}
+    raise "Incorrect key" if levels.length == 0
+
+    begin
+      last = levels.pop
+      object = dict
+      levels.each do |l|
+        object[l] = {} unless object.has_key? l
+        object = object[l]
+      end
+
+      if value.length > 0
+        object[last] = value
+      else
+        object.delete last
+      end
+    rescue
+      log :err, "The configuration key '#{key}' isn't right"
+      raise "Incorrect key"
+    end
+
+    dict
+  end
+
+  def dot_get_value(dict, key)
+    levels = key.split(".").map {|l| l.to_sym}
+    raise "Incorrect key" if levels.length == 0
+
+    begin
+      last = levels.pop
+      object = dict
+      levels.each do |l|
+        object = object[l]
+      end
+      return object[last]
+    rescue
+      log :err, "The configuration key '#{key}' isn't right"
+      raise "Incorrect key"
+    end
+  end
+end
 
 class List < ExtendedThor
   desc "packages", "Show a list of source packages in the repo"
@@ -202,8 +275,6 @@ class RepoCLI < ExtendedThor
     repo_conf[:build_environment] = benv
 
     # guess repo arches
-    require 'pp'
-    pp repo_conf[:build_environment]
     repo_conf[:arches] = Dr::config.build_environments[benv][:arches]
 
     loop do
@@ -344,10 +415,14 @@ class RepoCLI < ExtendedThor
     repo.unpush pkg_name, suite
   end
 
-
   desc "list SUBCOMMAND [ARGS]", "show information about packages"
   map "l" => :list, "ls" => :list
   subcommand "list", List
+
+
+  desc "config SUBCOMMAND [ARGS]", "configure your repository"
+  map "c" => :config, "conf" => :config, "configure" => :config
+  subcommand "config", Conf
 
   desc "rm [pkg-name]", "remove a package completely from the build system"
   method_option :force, :aliases => "-f", :type => :boolean,

@@ -4,6 +4,7 @@
 require "dr/package"
 require "dr/pkgversion"
 require "dr/shellcmd"
+require "dr/utils"
 
 require "yaml"
 require "octokit"
@@ -117,12 +118,20 @@ module Dr
       end
     end
 
-    def get_source_metadata
+    def get_configuration
       md_file = "#{@repo.location}/packages/#{@name}/metadata"
       if File.exists? md_file
-        YAML.load_file md_file
+        Utils::symbolise_keys YAML.load_file md_file
       else
         {}
+      end
+    end
+
+    def set_configuration(config)
+      # TODO: Some validation needed
+      md_file = "#{@repo.location}/packages/#{@name}/metadata"
+      File.open(md_file, "w") do |f|
+        YAML.dump Utils::stringify_symbols(config), f
       end
     end
 
@@ -192,9 +201,9 @@ module Dr
         end
 
         benv = :default
-        src_meta = get_source_metadata
+        src_meta = get_configuration
         if src_meta.has_key? :build_environment
-          benv = src_meta[:build_environment]
+          benv = src_meta[:build_environment].to_sym
         end
 
         arches.each do |arch|

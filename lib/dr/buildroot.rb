@@ -14,6 +14,10 @@ module Dr
     def initialize(env, arch, br_cache)
       @arch = arch
       if arch == "all"
+        unless Dr::config.build_environments.has_key? env
+          log :err, "Unkown build environment: #{env.to_s.fg "red"}"
+          raise "Build environment not recognised"
+        end
         @arch = Dr::config.build_environments[env][:arches][0]
       end
 
