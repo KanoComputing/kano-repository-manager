@@ -144,11 +144,16 @@ class List < ExtendedThor
     end
   end
 
-
-  desc "versions PACKAGE", "Show the history of all available versions for a package"
+  desc "versions PACKAGE", "DEPRECATED, please use builds instead"
   def versions(pkg_name)
+    log :warn, "This subcommand is deprecated, please use builds instead"
+    builds pkg_name
+  end
+
+  desc "builds PACKAGE", "Show the history of all builds of a package"
+  def builds(pkg_name)
     repo = get_repo_handle
-    log :info, "Listing all built versions of #{pkg_name.style "pkg-name"}"
+    log :info, "Listing all buils of #{pkg_name.style "pkg-name"}"
 
     suites = repo.get_suites
 
@@ -392,7 +397,7 @@ class RepoCLI < ExtendedThor
   desc "push [pkg-name]", "push a built package to a specified suite"
   method_option :suite, :aliases => "-s", :type => :string,
                 :desc => "the target suite (defaults to testing)"
-  method_option :version, :aliases => "-v", :type => :string,
+  method_option :build, :aliases => "-b", :type => :string,
                 :desc => "which version to push (defaults to the highest one build)"
   method_option :force, :aliases => "-f", :type => :boolean,
                 :desc => "force inclusion of the package to the suite"
@@ -403,7 +408,7 @@ class RepoCLI < ExtendedThor
     suite = options["suite"] if options.has_key? "suite"
 
     version = nil
-    version = options["version"] if options.has_key? "version"
+    version = options["build"] if options.has_key? "build"
 
     repo.push pkg_name, version, suite, options["force"] == true
   end
