@@ -157,7 +157,13 @@ module Dr
       Dir.mktmpdir do |src_dir|
         checkout branch, src_dir
 
-        version = PkgVersion.new get_version "#{src_dir}/debian/changelog"
+        version_string = get_version "#{src_dir}/debian/changelog"
+        unless version_string
+          log :err, "Couldn't get the version string from the changelog"
+          raise "The changelog format doesn't seem be right"
+        end
+
+        version = PkgVersion.new version_string
         log :info, "Source version: #{version.source.style "version"}"
 
         while build_exists? version

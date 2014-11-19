@@ -569,6 +569,7 @@ begin
 rescue StandardError => e
   Dr::Logger.log :err, e.to_s
   e.backtrace.each do |line|
-    Dr::Logger.log :err, line
+    line = "  #{line}" if line.length > 0 && line[0] == '/'
+    Dr::Logger.log :err, line.fg("grey")
   end
 end
