@@ -71,8 +71,9 @@ module Dr
       @default_branch = get_current_branch
     end
 
-    def reinitialise_repo
-      git_addr = get_repo_url
+    def reinitialise_repo(git_addr=nil, branch=nil)
+      git_addr ||= get_repo_url
+      branch ||= @default_branch
 
       log :info, "Re-downloading the source repository of " +
                  "#{@name.style "pkg-name"}"
@@ -84,7 +85,7 @@ module Dr
         src_dir = "#{tmp}/src"
         FileUtils.mkdir_p src_dir
 
-        checkout @default_branch, src_dir
+        checkout branch, src_dir
 
         unless File.exists? "#{tmp}/src/debian/control"
           log :err, "The debian packaging files not found in the repository"
@@ -116,6 +117,8 @@ module Dr
         FileUtils.rm_rf src_dir
         FileUtils.mv "#{tmp}/git", "#{src_dir}"
       end
+
+      @default_branch = branch
     end
 
     def get_configuration

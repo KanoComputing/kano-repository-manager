@@ -539,12 +539,16 @@ class RepoCLI < ExtendedThor
 
 
   desc "force-sync", "Force cloning the sources repository from scratch again"
+  method_option :url, :aliases => "-u", :type => :string,
+                :desc => "The URL to clone from"
+  method_option :branch, :aliases => "-b", :type => :string,
+                :desc => "The default branch to use for building"
   def force_sync(pkg_name)
     repo = get_repo_handle
     pkg = repo.get_package pkg_name
 
     if pkg.is_a? Dr::GitPackage
-      pkg.reinitialise_repo
+      pkg.reinitialise_repo options["url"], options["branch"]
     else
       raise "The source of #{pkg_name.style "pkg-name"} is not managed by " +
             "#{"dr".bright}"
