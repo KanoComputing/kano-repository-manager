@@ -383,16 +383,6 @@ module Dr
       nil
     end
 
-    private
-    def get_key
-      File.open "#{@location}/archive/conf/distributions", "r" do |f|
-        f.each_line do |line|
-          m = line.match /^SignWith: (.+)/
-          return m.captures[0] if m
-        end
-      end
-    end
-
     def is_used?(pkg_name, version=nil)
       versions_by_suite = get_subpackage_versions pkg_name
       versions_by_suite.inject(false) do |rslt, hash_pair|
@@ -401,6 +391,16 @@ module Dr
           rslt || !versions.empty?
         else
           rslt || versions.has_value?(version)
+        end
+      end
+    end
+
+    private
+    def get_key
+      File.open "#{@location}/archive/conf/distributions", "r" do |f|
+        f.each_line do |line|
+          m = line.match /^SignWith: (.+)/
+          return m.captures[0] if m
         end
       end
     end

@@ -12,6 +12,7 @@ require "dr/repo"
 require "dr/gitpackage"
 require "dr/debpackage"
 require "dr/buildroot"
+require "dr/pkgversion"
 
 require "dr/shellcmd"
 require "dr/logger"
@@ -555,13 +556,59 @@ class RepoCLI < ExtendedThor
     end
   end
 
-  desc "snapshot", "save a snapshot of the archive"
-  def snapshot(tag)
+  #desc "snapshot", "save a snapshot of the archive"
+  #def snapshot(tag)
+  #  repo = get_repo_handle
+  #end
+
+  desc "cleanup", "Remove builds beyond certain date or number"
+  method_option :package, :aliases => "-p", :type => :string,
+                :desc => "Cleanup this package only"
+  method_option :date, :aliases => "-d", :type => :string,
+                :desc => "Remove builds beyond this date (YYYYMMDD)"
+  method_option :number, :aliases => "-n", :type => :string,
+                :desc => "Keep only N newest builds"
+  def cleanup
     repo = get_repo_handle
 
-    log :info, "Releasing all packages from testing"
-    repo.list_packages.each do |pkg|
-      repo.push pkg.name, nil, "stable"
+    if options["date"] != nil && options["number"] != nil
+      log :err, "Can't use -n and -d at the same time"
+      raise "Bad arguments"
+    end
+
+    date = options["date"]
+    number = options["number"]
+
+    if options["date"] == nil && options["number"] == nil
+      number = 10
+    end
+
+    packages = unless options["package"] == nil
+      [repo.get_package(options["package"])]
+    else
+      repo.list_packages
+    end
+
+    packages.each do |pkg|
+      kept = 0
+      pkg.history.each do |version_string|
+        # Can't remove a used build
+        if repo.is_used? pkg.name, version_string
+          kept += 1
+          next
+        end
+
+        if date != nil
+          version = Dr::PkgVersion.new version_string
+          if version.date.to_i < date.to_i
+            rmbuild pkg.name, version_string
+          end
+        elsif number != nil && kept >= number.to_i
+            rmbuild pkg.name, version_string
+        else 
+          kept += 1
+        end
+      end
     end
   end
 end
