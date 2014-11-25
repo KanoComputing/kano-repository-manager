@@ -12,6 +12,7 @@ require "dr/repo"
 require "dr/gitpackage"
 require "dr/debpackage"
 require "dr/buildroot"
+require "dr/pkgversion"
 
 require "dr/shellcmd"
 require "dr/logger"
@@ -59,6 +60,79 @@ class Archive < ExtendedThor
   #end
 end
 
+class Conf < ExtendedThor
+  desc "repo", "Configuration of the whole repository"
+  def repo(key, value=nil)
+    repo = get_repo_handle
+
+    metadata = repo.get_configuration
+
+    if value == nil
+      value = dot_get_value metadata, key
+      puts value if value
+    else
+      repo.set_configuration dot_set_value metadata, key, value
+    end
+  end
+
+  desc "package", "Package-specific configuration options"
+  def package(pkg_name, key, value=nil)
+    repo = get_repo_handle
+    pkg = repo.get_package pkg_name
+
+    metadata = pkg.get_configuration
+
+    if value == nil
+      value = dot_get_value metadata, key
+      puts value if value
+    else
+      pkg.set_configuration dot_set_value metadata, key, value
+    end
+  end
+
+  private
+  def dot_set_value(dict, key, value)
+    levels = key.split(".").map {|l| l.to_sym}
+    raise "Incorrect key" if levels.length == 0
+
+    begin
+      last = levels.pop
+      object = dict
+      levels.each do |l|
+        object[l] = {} unless object.has_key? l
+        object = object[l]
+      end
+
+      if value.length > 0
+        object[last] = value
+      else
+        object.delete last
+      end
+    rescue
+      log :err, "The configuration key '#{key}' isn't right"
+      raise "Incorrect key"
+    end
+
+    dict
+  end
+
+  def dot_get_value(dict, key)
+    levels = key.split(".").map {|l| l.to_sym}
+    raise "Incorrect key" if levels.length == 0
+
+    begin
+      last = levels.pop
+      object = dict
+      levels.each do |l|
+        object = object[l]
+      end
+      return object[last]
+    rescue
+      log :err, "The configuration key '#{key}' isn't right"
+      raise "Incorrect key"
+    end
+  end
+end
 
 class List < ExtendedThor
   desc "packages", "Show a list of source packages in the repo"
@@ -71,11 +145,16 @@ class List < ExtendedThor
     end
   end
 
-
-  desc "versions PACKAGE", "Show the history of all available versions for a package"
+  desc "versions PACKAGE", "DEPRECATED, please use builds instead"
   def versions(pkg_name)
+    log :warn, "This subcommand is deprecated, please use builds instead"
+    builds pkg_name
+  end
+
+  desc "builds PACKAGE", "Show the history of all builds of a package"
+  def builds(pkg_name)
     repo = get_repo_handle
-    log :info, "Listing all built versions of #{pkg_name.style "pkg-name"}"
+    log :info, "Listing all buils of #{pkg_name.style "pkg-name"}"
 
     suites = repo.get_suites
 
@@ -178,7 +257,7 @@ class RepoCLI < ExtendedThor
       :arches => ["amd64"],
       :components => ["main"],
       :suites => ["stable", "testing", "unstable"],
-      :distro => "Kano OS",
+      :build_environment => :kano,
       :codenames => []
     }
 
@@ -188,40 +267,38 @@ class RepoCLI < ExtendedThor
     desc = ask "   Description [#{repo_conf[:desc]}]:"
     repo_conf[:desc] = desc if desc.length > 0
 
-    distro_map = {}
-    puts "   Distribution [pick one]: "
-    Dr::config.distros.each_with_index do |distro, index|
-      distro_name = distro[0]
-      distro_map[index+1] = distro_name
-
-      distro_name = distro_name.fg "yellow" if distro_name == repo_conf[:distro]
-      puts "     [#{index+1}] #{distro_name}"
+    puts "   Default build environment [pick one]: "
+    Dr::config.build_environments.each do |id, benv|
+      puts "     [#{id.to_s.fg "blue"}] #{benv[:name]}"
     end
 
-    distro = ask "   Your choice: "
-    until distro.length == 0 || distro_map.has_key?(distro.to_i)
-      distro = ask "   Your choice: "
+    benv = nil
+    loop do
+      benv_str = ask "   Your choice [#{repo_conf[:build_environment].to_s.fg "yellow"}]:"
+      benv = benv_str.to_sym
+      break if Dr::config.build_environments.has_key? benv_str.to_sym
     end
-    repo_conf[:distro] = distro_map[distro.to_i] if distro.length > 0
+    repo_conf[:build_environment] = benv
 
-    require 'pp'
-    # guess default arch
-    pp Dr::config.distros
-    pp Dr::config.distros[repo_conf[:distro]]
-    repo_conf[:arches] = [Dr::config.distros[repo_conf[:distro]][:arches][0]]
+    # guess repo arches
+    repo_conf[:arches] = Dr::config.build_environments[benv][:arches]
 
-    while true
+    loop do
       str = ask "   Architectures [#{repo_conf[:arches].join(" ").fg("yellow")}]:"
       break if str.length == 0
 
+      # Determine the available architectures
+      avail = Dr.config.build_environments[benv][:arches]
+
       arches = str.split(/\s+/)
       arches_valid = arches.reduce(true) do |acc, arch|
-        supported = Dr::config.distros[repo_conf[:distro]][:arches].include?(arch)
-        if !supported
-          puts "     " + "#{arch.fg "yellow"}" + " not supported by the distro"
+        if !avail.include?(arch)
+          puts "     " + "#{arch.fg "yellow"}" +
+               " not supported by the build environments you selected"
+          acc = false
         end
 
-        supported
+        acc
       end
       next if !arches_valid
 
@@ -321,7 +398,7 @@ class RepoCLI < ExtendedThor
   desc "push [pkg-name]", "push a built package to a specified suite"
   method_option :suite, :aliases => "-s", :type => :string,
                 :desc => "the target suite (defaults to testing)"
-  method_option :version, :aliases => "-v", :type => :string,
+  method_option :build, :aliases => "-b", :type => :string,
                 :desc => "which version to push (defaults to the highest one build)"
   method_option :force, :aliases => "-f", :type => :boolean,
                 :desc => "force inclusion of the package to the suite"
@@ -332,7 +409,7 @@ class RepoCLI < ExtendedThor
     suite = options["suite"] if options.has_key? "suite"
 
     version = nil
-    version = options["version"] if options.has_key? "version"
+    version = options["build"] if options.has_key? "build"
 
     repo.push pkg_name, version, suite, options["force"] == true
   end
@@ -344,10 +421,14 @@ class RepoCLI < ExtendedThor
     repo.unpush pkg_name, suite
   end
 
-
   desc "list SUBCOMMAND [ARGS]", "show information about packages"
   map "l" => :list, "ls" => :list
   subcommand "list", List
+
+
+  desc "config SUBCOMMAND [ARGS]", "configure your repository"
+  map "c" => :config, "conf" => :config, "configure" => :config
+  subcommand "config", Conf
 
   desc "rm [pkg-name]", "remove a package completely from the build system"
   method_option :force, :aliases => "-f", :type => :boolean,
@@ -459,25 +540,75 @@ class RepoCLI < ExtendedThor
 
 
   desc "force-sync", "Force cloning the sources repository from scratch again"
+  method_option :url, :aliases => "-u", :type => :string,
+                :desc => "The URL to clone from"
+  method_option :branch, :aliases => "-b", :type => :string,
+                :desc => "The default branch to use for building"
   def force_sync(pkg_name)
     repo = get_repo_handle
     pkg = repo.get_package pkg_name
 
     if pkg.is_a? Dr::GitPackage
-      pkg.reinitialise_repo
+      pkg.reinitialise_repo options["url"], options["branch"]
     else
       raise "The source of #{pkg_name.style "pkg-name"} is not managed by " +
             "#{"dr".bright}"
     end
   end
 
-  desc "snapshot", "save a snapshot of the archive"
-  def snapshot(tag)
+  #desc "snapshot", "save a snapshot of the archive"
+  #def snapshot(tag)
+  #  repo = get_repo_handle
+  #end
+
+  desc "cleanup", "Remove builds beyond certain date or number"
+  method_option :package, :aliases => "-p", :type => :string,
+                :desc => "Cleanup this package only"
+  method_option :date, :aliases => "-d", :type => :string,
+                :desc => "Remove builds beyond this date (YYYYMMDD)"
+  method_option :number, :aliases => "-n", :type => :string,
+                :desc => "Keep only N newest builds"
+  def cleanup
     repo = get_repo_handle
 
-    log :info, "Releasing all packages from testing"
-    repo.list_packages.each do |pkg|
-      repo.push pkg.name, nil, "stable"
+    if options["date"] != nil && options["number"] != nil
+      log :err, "Can't use -n and -d at the same time"
+      raise "Bad arguments"
+    end
+
+    date = options["date"]
+    number = options["number"]
+
+    if options["date"] == nil && options["number"] == nil
+      number = 10
+    end
+
+    packages = unless options["package"] == nil
+      [repo.get_package(options["package"])]
+    else
+      repo.list_packages
+    end
+
+    packages.each do |pkg|
+      kept = 0
+      pkg.history.each do |version_string|
+        # Can't remove a used build
+        if repo.is_used? pkg.name, version_string
+          kept += 1
+          next
+        end
+
+        if date != nil
+          version = Dr::PkgVersion.new version_string
+          if version.date.to_i < date.to_i
+            rmbuild pkg.name, version_string
+          end
+        elsif number != nil && kept >= number.to_i
+            rmbuild pkg.name, version_string
+        else 
+          kept += 1
+        end
+      end
     end
   end
 end
@@ -493,4 +624,8 @@ begin
   RepoCLI.start ARGV
 rescue StandardError => e
   Dr::Logger.log :err, e.to_s
+  e.backtrace.each do |line|
+    line = "  #{line}" if line.length > 0 && line[0] == '/'
+    Dr::Logger.log :err, line.fg("grey")
+  end
 end

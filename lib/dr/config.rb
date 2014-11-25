@@ -3,13 +3,13 @@
 
 require "yaml"
 
-require "dr/distros"
+require "dr/build_environments"
 
 module Dr
   class Config
     attr_reader :default_repo, :repositories
 
-    include Distros
+    include BuildEnvironments
 
     def initialize(locations)
       @default_repo = nil
@@ -47,10 +47,10 @@ module Dr
         end
       end
 
-      if conf_file.has_key? "distros"
-        conf_file["distros"].each do |name, distro|
-          distro_sym_keys = distro.inject({}) { |memo,(k,v)| memo[k.to_sym] = v; memo }
-          add_distro(name, distro_sym_keys)
+      if conf_file.has_key? "build_environments"
+        conf_file["build_environments"].each do |id, be|
+          be_sym_keys = be.inject({}) { |memo,(k,v)| memo[k.to_sym] = v; memo }
+          add_build_environment(id, be_sym_keys)
         end
       end
     end

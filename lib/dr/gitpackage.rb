@@ -4,6 +4,7 @@
 require "dr/package"
 require "dr/pkgversion"
 require "dr/shellcmd"
+require "dr/utils"
 
 require "yaml"
 require "octokit"
@@ -70,8 +71,9 @@ module Dr
       @default_branch = get_current_branch
     end
 
-    def reinitialise_repo
-      git_addr = get_repo_url
+    def reinitialise_repo(git_addr=nil, branch=nil)
+      git_addr ||= get_repo_url
+      branch ||= @default_branch
 
       log :info, "Re-downloading the source repository of " +
                  "#{@name.style "pkg-name"}"
@@ -83,7 +85,7 @@ module Dr
         src_dir = "#{tmp}/src"
         FileUtils.mkdir_p src_dir
 
-        checkout @default_branch, src_dir
+        checkout branch, src_dir
 
         unless File.exists? "#{tmp}/src/debian/control"
           log :err, "The debian packaging files not found in the repository"
@@ -115,6 +117,25 @@ module Dr
         FileUtils.rm_rf src_dir
         FileUtils.mv "#{tmp}/git", "#{src_dir}"
       end
+
+      @default_branch = branch
+    end
+
+    def get_configuration
+      md_file = "#{@repo.location}/packages/#{@name}/metadata"
+      if File.exists? md_file
+        Utils::symbolise_keys YAML.load_file md_file
+      else
+        {}
+      end
+    end
+
+    def set_configuration(config)
+      # TODO: Some validation needed
+      md_file = "#{@repo.location}/packages/#{@name}/metadata"
+      File.open(md_file, "w") do |f|
+        YAML.dump Utils::stringify_symbols(config), f
+      end
     end
 
     def build(branch=nil, force=false)
@@ -139,7 +160,13 @@ module Dr
       Dir.mktmpdir do |src_dir|
         checkout branch, src_dir
 
-        version = PkgVersion.new get_version "#{src_dir}/debian/changelog"
+        version_string = get_version "#{src_dir}/debian/changelog"
+        unless version_string
+          log :err, "Couldn't get the version string from the changelog"
+          raise "The changelog format doesn't seem be right"
+        end
+
+        version = PkgVersion.new version_string
         log :info, "Source version: #{version.source.style "version"}"
 
         while build_exists? version
@@ -168,14 +195,28 @@ module Dr
         repo_arches = @repo.get_architectures
         pkg_arches = get_architectures("#{src_dir}/debian/control")
         arches = case
-          when pkg_arches.include?("any") || pkg_arches.include?("all")
+          when pkg_arches.include?("any")
             repo_arches
+          when pkg_arches.include?("all")
+            ["all"]
           else
             repo_arches & pkg_arches
           end
 
+        if repo_arches.length == 0
+          log :error, "#{@name.style "pkg-name"} cannot be build for any of " +
+                      "the architectures supported by this repository"
+          raise "Unable to build the package for this repository"
+        end
+
+        benv = :default
+        src_meta = get_configuration
+        if src_meta.has_key? :build_environment
+          benv = src_meta[:build_environment].to_sym
+        end
+
         arches.each do |arch|
-          @repo.buildroot(arch).open do |br|
+          @repo.buildroot(arch, benv).open do |br|
             log :info, "Building the #{@name.style "pkg-name"} package " +
                        "version #{version.to_s.style "version"} for #{arch}"
 

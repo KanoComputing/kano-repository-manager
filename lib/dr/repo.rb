@@ -8,6 +8,7 @@ require "dr/shellcmd"
 require "dr/logger"
 require "dr/gnupg"
 require "dr/buildroot"
+require "dr/utils"
 
 require "fileutils"
 require "yaml"
@@ -24,13 +25,6 @@ module Dr
       @location = File.expand_path loc
 
       @packages_dir = "#{@location}/packages"
-
-      meta = "#{@location}/metadata"
-      begin
-        @metadata = YAML.load_file(meta)
-      rescue
-        @metadata = {}
-      end
     end
 
     def setup(conf)
@@ -78,13 +72,27 @@ module Dr
       FileUtils.mkdir_p @packages_dir
       FileUtils.mkdir_p "#{@location}/buildroots"
 
-      @metadata = {"distro" => conf[:distro]}
+      metadata = {
+        "default_build_environment" => conf[:build_environment].to_s
+      }
       File.open("#{@location}/metadata", "w" ) do |out|
-        YAML.dump(@metadata)
+        out.write metadata.to_yaml
       end
+    end
 
-      conf[:arches].each do |arch|
-        buildroot arch
+    def get_configuration
+        meta_file = "#{@location}/metadata"
+        if File.exists? meta_file
+          Utils::symbolise_keys YAML.load_file(meta_file)
+        else
+          {}
+        end
+    end
+
+    def set_configuration(new_metadata)
+      # TODO: Some validation needed
+      File.open("#{@location}/metadata", "w" ) do |out|
+        out.write Utils::stringify_symbols(new_metadata).to_yaml
       end
     end
 
@@ -109,9 +117,13 @@ module Dr
       pkgs.sort
     end
 
-    def buildroot(arch)
+    def buildroot(arch, build_env=:default)
+      if build_env == :default
+        build_env = get_configuration[:default_build_environment].to_sym
+      end
+
       cache_dir = "#{@location}/buildroots/"
-      BuildRoot.new @metadata["distro"], arch, cache_dir
+      BuildRoot.new build_env, arch, cache_dir
     end
 
     def get_package(name)
@@ -371,16 +383,6 @@ module Dr
       nil
     end
 
-    private
-    def get_key
-      File.open "#{@location}/archive/conf/distributions", "r" do |f|
-        f.each_line do |line|
-          m = line.match /^SignWith: (.+)/
-          return m.captures[0] if m
-        end
-      end
-    end
-
     def is_used?(pkg_name, version=nil)
       versions_by_suite = get_subpackage_versions pkg_name
       versions_by_suite.inject(false) do |rslt, hash_pair|
@@ -389,6 +391,16 @@ module Dr
           rslt || !versions.empty?
         else
           rslt || versions.has_value?(version)
+        end
+      end
+    end
+
+    private
+    def get_key
+      File.open "#{@location}/archive/conf/distributions", "r" do |f|
+        f.each_line do |line|
+          m = line.match /^SignWith: (.+)/
+          return m.captures[0] if m
         end
       end
     end

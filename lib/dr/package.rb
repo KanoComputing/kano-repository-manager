@@ -42,6 +42,14 @@ module Dr
       FileUtils.rm_rf "#{@repo.location}/packages/#{@name}/builds/#{version}"
     end
 
+    def get_configuration
+      {}
+    end
+
+    def set_configuration(config)
+      raise "This package isn't configurable"
+    end
+
     def <=>(o)
       self.name <=> o.name
     end

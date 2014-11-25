@@ -1,12 +1,12 @@
 # Copyright (C) 2014 Kano Computing Ltd.
 # License: http://www.gnu.org/licenses/gpl-2.0.txt GNU General Public License v2
 
-
 module Dr
-  module Distros
-    @@distros = {
-      "Kano OS" => {
-        :arches => ["armhf", "armel"],
+  module BuildEnvironments
+    @@build_environments = {
+      :kano => {
+        :name =>"Kano OS",
+        :arches => ["armhf"],
         :repos => {
           :raspbian => {
             :url => "http://mirror.ox.ac.uk/sites/archive.raspbian.org/archive/raspbian/",
@@ -34,15 +34,31 @@ module Dr
         },
         :base_repo => :raspbian,
         :packages => []
+      },
+
+      :wheezy => {
+        :name => "Debian Wheezy",
+        :arches => ["x86_64"],
+        :repos => {
+          :wheezy => {
+            :url => "http://ftp.uk.debian.org/debian/",
+            :key => "https://ftp-master.debian.org/keys/archive-key-7.0.asc",
+            :src => true,
+            :codename => "wheezy",
+            :components => "main contrib non-free"
+          }
+        },
+        :base_repo => :wheezy,
+        :packages => []
       }
     }
 
-    def distros
-      @@distros
+    def build_environments
+      @@build_environments
     end
 
-    def add_distro(name, distro)
-      @@distros[name] = distro
+    def add_build_environment(name, benv)
+      @@build_environments[name.to_sym] = benv
     end
   end
 end

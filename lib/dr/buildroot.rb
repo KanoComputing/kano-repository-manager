@@ -11,23 +11,31 @@ module Dr
   class BuildRoot
     include Logger
 
-    def initialize(base, arch, br_cache)
-      @location = "#{br_cache}/#{base.strip.downcase.gsub(" ", "_")}-#{arch}.tar.gz"
-      @base = base
+    def initialize(env, arch, br_cache)
       @arch = arch
+      if arch == "all"
+        unless Dr::config.build_environments.has_key? env
+          log :err, "Unkown build environment: #{env.to_s.fg "red"}"
+          raise "Build environment not recognised"
+        end
+        @arch = Dr::config.build_environments[env][:arches][0]
+      end
+
+      @location = "#{br_cache}/#{env.to_s}-#{@arch}.tar.gz"
+      @env = env
 
       @essential_pkgs = "sudo,vim,ca-certificates,fakeroot,build-essential," +
                         "curl,devscripts,debhelper,git,bc,locales,equivs," +
                         "pkg-config,libfile-fcntllock-perl"
 
-      if !File.exists?(@location)
-        setup base, arch
+      unless File.exists?(@location)
+        setup @env, @arch
       end
     end
 
     def open
       Dir.mktmpdir do |tmp|
-        log :info, "Preparing #{@base.fg "blue"} #{@arch.fg "orange"} build root"
+        log :info, "Preparing #{@env.to_s.fg "blue"} #{@arch.fg "orange"} build root"
         ShellCmd.new "sudo tar xz -C #{tmp} -f #{@location}", :tag => "tar"
         begin
           log :info, "Mounting the /proc file system"
@@ -46,18 +54,16 @@ module Dr
     end
 
     private
-    def setup(base, arch)
-      unless Dr.config.distros.include? base
-        raise "Sorry, OS base #{base.fg "blue"} isn't supported by dr."
+    def setup(env, arch)
+      unless Dr.config.build_environments.has_key? env
+        raise "Sorry, build environment #{env.to_s.fg "blue"} isn't supported by dr."
       end
 
-      unless Dr.config.distros[base][:arches].include? arch
-        raise "Arch #{arch.fg "blue"} not supported by this base."
+      unless Dr.config.build_environments[env][:arches].include? arch
+        raise "Arch #{arch.fg "blue"} not supported by this build environment."
       end
 
-      repos = Dr.config.distros[base][:repos]
-      base_repo = Dr.config.distros[base][:base_repo].to_sym
-      additional_pkgs = Dr.config.distros[base][:packages].join ","
+      repos = Dr.config.build_environments[env][:repos]
 
       Dir.mktmpdir do |tmp|
         broot = "#{tmp}/broot"
@@ -66,29 +72,14 @@ module Dr
         log :info, "Setting up the buildroot"
 
         begin
-          log :info, "Bootstrapping #{base} (first stage)"
+          arch_cmd = ShellCmd.new "arch"
+          arch = arch_cmd.out.strip
 
-          cmd = "sudo debootstrap --foreign --variant=buildd --no-check-gpg " +
-                "--include=#{@essential_pkgs},#{additional_pkgs} " +
-                "--arch=#{arch} wheezy #{broot} #{repos[base_repo][:url]}"
-          debootsrap = ShellCmd.new cmd, {
-            :tag => "debootstrap",
-            :show_out => true
-          }
-
-          static_qemu = Dir["/usr/bin/qemu-*-static"]
-          static_qemu.each do |path|
-            cp = ShellCmd.new "sudo cp #{path} #{broot}/usr/bin", {
-              :tag => "cp"
-            }
+          if @arch == arch
+            setup_native broot
+          else
+            setup_foreign broot
           end
-
-          log :info, "Bootstrapping Raspian (#{arch} stage)"
-          cmd = "sudo chroot #{broot} /debootstrap/debootstrap --second-stage"
-          debootstrap = ShellCmd.new cmd, {
-            :tag => "debootstrap",
-            :show_out => true
-          }
 
           log :info, "Configuring the build root"
 
@@ -140,6 +131,54 @@ EOF"
           ShellCmd.new "sudo rm -rf #{broot}", :tag => "rm"
         end
       end
+    end
+
+    def setup_foreign(broot)
+      repos = Dr.config.build_environments[@env][:repos]
+      base_repo = Dr.config.build_environments[@env][:base_repo].to_sym
+      additional_pkgs = Dr.config.build_environments[@env][:packages].join ","
+      codename = repos[base_repo][:codename]
+      url = repos[base_repo][:url]
+
+      log :info, "Bootstrapping #{@env.to_s} (foreign chroot, first stage)"
+      cmd = "sudo debootstrap --foreign --variant=buildd --no-check-gpg " +
+            "--include=#{@essential_pkgs},#{additional_pkgs} " +
+            "--arch=#{@arch} #{codename} #{broot} #{url}"
+      debootsrap = ShellCmd.new cmd, {
+        :tag => "debootstrap",
+        :show_out => true
+      }
+
+      static_qemu = Dir["/usr/bin/qemu-*-static"]
+      static_qemu.each do |path|
+        cp = ShellCmd.new "sudo cp #{path} #{broot}/usr/bin", {
+          :tag => "cp"
+        }
+      end
+
+      log :info, "Bootstrapping Raspian (#{@arch} stage)"
+      cmd = "sudo chroot #{broot} /debootstrap/debootstrap --second-stage"
+      debootstrap = ShellCmd.new cmd, {
+        :tag => "debootstrap",
+        :show_out => true
+      }
+    end
+
+    def setup_native(broot)
+      repos = Dr.config.build_environments[@env][:repos]
+      base_repo = Dr.config.build_environments[@env][:base_repo].to_sym
+      additional_pkgs = Dr.config.build_environments[@env][:packages].join ","
+      codename = repos[base_repo][:codename]
+      url = repos[base_repo][:url]
+
+      log :info, "Bootstrapping #{@env.to_s} (native chroot)"
+      cmd = "sudo debootstrap --variant=buildd --no-check-gpg " +
+            "--include=#{@essential_pkgs},#{additional_pkgs} " +
+            "#{codename} #{broot} #{repos[base_repo][:url]}"
+      debootsrap = ShellCmd.new cmd, {
+        :tag => "debootstrap",
+        :show_out => true
+      }
     end
   end
 end
