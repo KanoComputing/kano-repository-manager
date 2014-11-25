@@ -33,23 +33,46 @@ module Dr
       end
     end
 
-    def open
-      Dir.mktmpdir do |tmp|
-        log :info, "Preparing #{@env.to_s.fg "blue"} #{@arch.fg "orange"} build root"
-        ShellCmd.new "sudo tar xz -C #{tmp} -f #{@location}", :tag => "tar"
-        begin
-          log :info, "Mounting the /proc file system"
-          mnt_cmd = "sudo chroot #{tmp} mount -t proc none /proc"
-          ShellCmd.new mnt_cmd, :tag => "mount"
-          yield tmp
-        ensure
-          log :info, "Unmounting the /proc file system"
-          umnt_cmd = "sudo chroot #{tmp} umount -f /proc"
-          ShellCmd.new umnt_cmd, :tag => "umount"
+    # Prepare the buildroot to be used.
+    #
+    # @return [String] Absolute path to the temporary directory with the
+    #                  prepared buildroot in it.
+    def prepare
+      dir = Dir.mktmpdir
 
-          log :info, "Cleaning up the buildroot"
-          ShellCmd.new "sudo rm -rf #{tmp}/*", :tag => "rm"
-        end
+      log :info, "Preparing #{@env.to_s.fg "blue"} #{@arch.fg "orange"} build root"
+      ShellCmd.new "sudo tar xz -C #{dir} -f #{@location}", :tag => "tar"
+
+      log :info, "Mounting the /proc file system"
+      mnt_cmd = "sudo chroot #{dir} mount -t proc none /proc"
+      ShellCmd.new mnt_cmd, :tag => "mount"
+
+      tmp
+    end
+
+    # Destroy a buildroot that has been set up in a directory.
+    #
+    # @param dir [String] Path to the temporary directory with the buildroot.
+    def destroy(dir)
+      log :info, "Unmounting the /proc file system"
+      umnt_cmd = "sudo chroot #{dir} umount -f /proc"
+      ShellCmd.new umnt_cmd, :tag => "umount"
+
+      log :info, "Cleaning up the buildroot"
+      ShellCmd.new "sudo rm -rf #{dir}/*", :tag => "rm"
+    end
+
+
+    # Prepares a buildroot, runs your block and cleans up afterwards.
+    #
+    # @yield [dir] Block that uses the build root.
+    # @yieldparam dir [String] Location of the buildroot (absolute path).
+    def open
+      begin
+        dir = pepare
+        yield dir
+      ensure
+        destroy dir
       end
     end
 

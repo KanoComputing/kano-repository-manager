@@ -18,6 +18,8 @@ require "dr/shellcmd"
 require "dr/logger"
 require "dr/config"
 
+require "dr/debugger"
+
 
 class ExtendedThor < Thor
   private
@@ -26,9 +28,8 @@ class ExtendedThor < Thor
 
   def initialize(*args)
     super
-    Dr::Logger::set_verbosity options[:verbosity]
+    Dr::Logger::set_verbosity options[:verbosity] if options[:verbosity]
   end
-
 
   def get_repo_handle
     if options.has_key? "repo"
@@ -244,7 +245,7 @@ end
 
 class RepoCLI < ExtendedThor
   class_option :repo, :type => :string, :aliases => "-r"
-  class_option :verbosity, :type => :string, :aliases => "-v", :default => "verbose"
+  class_option :verbosity, :type => :string, :aliases => "-v", :default => nil
 
 
   desc "init [LOCATION]", "setup a whole new repository from scratch"
@@ -600,7 +601,11 @@ class RepoCLI < ExtendedThor
 
         if date != nil
           version = Dr::PkgVersion.new version_string
-          if version.date.to_i < date.to_i
+          if version.date.to_i == 0
+            log :warn, "Not deleting #{version.style "version"} of " +
+                       "#{pkg.name.style "pkg-name"}, the version doesn't " +
+                       "seem to contain build-date"
+          elsif version.date.to_i < date.to_i
             rmbuild pkg.name, version_string
           end
         elsif number != nil && kept >= number.to_i
@@ -611,8 +616,30 @@ class RepoCLI < ExtendedThor
       end
     end
   end
-end
 
+  desc "debug", "Launch the debugging console for a package"
+  def debug(pkg_name)
+    repo = get_repo_handle
+    pkg = repo.get_package pkg_name
+
+
+    loop do
+      cmd = ask "#{pkg.name.style "pkg-name"}>"
+      break if cmd == "exit" || cmd == nil
+
+      args = cmd.split(/\s+/)
+      args = [] if args == nil
+
+      Dr::Debugger.repo = repo
+      Dr::Debugger.pkg = pkg
+
+      orig0 = $0 
+      $0 = ""
+      Dr::Debugger.start args
+      $0 = orig0
+    end
+  end
+end
 
 begin
   Dr::check_dependencies [
@@ -626,6 +653,6 @@ rescue StandardError => e
   Dr::Logger.log :err, e.to_s
   e.backtrace.each do |line|
     line = "  #{line}" if line.length > 0 && line[0] == '/'
-    Dr::Logger.log :err, line.fg("grey")
+    Dr::Logger.log :debug, line.fg("grey"), :verbose
   end
 end

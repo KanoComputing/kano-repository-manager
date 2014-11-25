@@ -5,6 +5,7 @@ require "dr/package"
 require "dr/pkgversion"
 require "dr/shellcmd"
 require "dr/utils"
+require "dr/config"
 
 require "yaml"
 require "octokit"
@@ -138,26 +139,20 @@ module Dr
       end
     end
 
-    def build(branch=nil, force=false)
+    # Prepare source tree for building.
+    #
+    # @param branch [String] The git branch to use, uses package defaults if
+    #                         omitted.
+    # @return [Array] Returns a tuple (path_to_source_tree, tree_revision)
+    def build_prepare_sources(branch=nil)
       branch = @default_branch unless branch
 
-      version = nil
-
-      orig_rev, curr_rev = update_from_origin branch
+      _, curr_rev = update_from_origin branch
       log :info, "Branch #{branch.fg "blue"}, revision #{curr_rev[0..7].fg "blue"}"
-      unless force
-        history.each do |v|
-          metadata = @repo.get_build_metadata @name, v
-          if metadata.has_key?("revision") && metadata["revision"] == curr_rev
-            msg = "This revision of #{@name.style "pkg-name"} has already " +
-                  "been built and is available as #{v.to_s.style "version"}"
-            log :info, msg
-            return v
-          end
-        end
-      end
 
-      Dir.mktmpdir do |src_dir|
+      src_dir = Dir.mktmpdir
+
+      begin
         checkout branch, src_dir
 
         version_string = get_version "#{src_dir}/debian/changelog"
@@ -191,6 +186,96 @@ module Dr
           f.write ch_entry
           f.write changelog
         end
+      ensure
+        FileUtils.remove_entry_secure src_dir
+      end
+
+      if block_given?
+        yield src_dir
+        FileUtils.remove_entry_secure src_dir
+      else
+        return src_dir
+      end
+    end
+
+    def build_prepare_buildenv(arch)
+      benv = :default
+      src_meta = get_configuration
+      if src_meta.has_key? :build_environment
+        benv = src_meta[:build_environment].to_sym
+      end
+
+      benv = @repo.buildroot(arch, benv)
+      benv_dir = broot.prepare
+
+      if block_given?
+        yield benv_dir
+        benv.destroy
+      else
+        return benv, benv_dir
+      end
+    end
+
+    def build_execute()
+    end
+
+    # Initialise the build environment for debugging.
+    #
+    # @param branch [String] The git branch to build from.
+    # @param arch [String] The architecture to use. Uses random one if omitted.
+    #
+    # @yield [pkg, src_dir, benv_dir] The debugging block.
+    # @yieldparam pkg [GitPackage] A reference to self.
+    # @yieldparam src_dir [String] Path to the source tree.
+    # @yieldparam benv_dir [String] Path ot the prepared build environment.
+    def debug(branch=nil, arch=nil)
+      benv_dir = nil
+      src_dir = build_prepare_sources branch
+
+      benv_supported = Dr::config.build_environments[benv][:arches]
+      unless arch
+        pkg_supported = get_architectures("#{src_dir}/debian/control")
+        arch = if pkg_supported.include? "all" or pkg_supported.include? "any"
+          benv_supported[0]
+        else
+          pkg_supported[0]
+        end
+      end
+
+      log :error, "The architecture #{arch.fg "blue"} " +
+                  "isn't supported by the build environment"
+      unless benv_supported.include? arch
+        raise "Couldn't setup the debugging environment"
+      end
+
+      benv, benv_dir = build_prepare_buildenv arch
+
+      yield self, src_dir, benv_dir
+    ensure
+      benv.destroy if benv_dir
+      FileUtils.remove_entry_secure src_dir if src_dir
+    end
+
+    # Build the package for all the architectures of the repository.
+    #
+    # @param branch [String] The name of the git branch to build from.
+    # @param force [Boolean] Don't mind that there already is a build from
+    #                        the same git commit.
+    # @return [PkgVersion] The version of the build.
+    def build(branch=nil, force=false)
+      src_dir = build_prepare_sources branch do |src_dir|
+        curr_rev = get_rev branch
+        unless force
+          history.each do |v|
+            metadata = @repo.get_build_metadata @name, v
+            if metadata.has_key?("revision") && metadata["revision"] == curr_rev
+              msg = "This revision of #{@name.style "pkg-name"} has already " +
+                    "been built and is available as #{v.to_s.style "version"}"
+              log :info, msg
+              return v
+            end
+          end
+        end
 
         repo_arches = @repo.get_architectures
         pkg_arches = get_architectures("#{src_dir}/debian/control")
@@ -209,14 +294,8 @@ module Dr
           raise "Unable to build the package for this repository"
         end
 
-        benv = :default
-        src_meta = get_configuration
-        if src_meta.has_key? :build_environment
-          benv = src_meta[:build_environment].to_sym
-        end
-
         arches.each do |arch|
-          @repo.buildroot(arch, benv).open do |br|
+          build_prepare_buildenv(arch) do |br|
             log :info, "Building the #{@name.style "pkg-name"} package " +
                        "version #{version.to_s.style "version"} for #{arch}"
 
@@ -244,7 +323,7 @@ mk-build-deps *.dsc -i -t "apt-get --no-install-recommends -y"
 rm -rf #{@name}-build-deps_*
 EOF
 EOS
-          build = <<-EOS
+        build = <<-EOS
 sudo chroot #{br} <<EOF
 cd /#{build_dir_name}
 debuild -i -uc -us -b

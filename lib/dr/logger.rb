@@ -80,7 +80,7 @@ module Dr
       :debug => "debug"
     }
 
-    @@verbosity = :verbose
+    @@verbosity = :informative
     @@logger_verbosity_levels = {
       :essential => 0,
       :important => 1,
@@ -89,7 +89,7 @@ module Dr
     }
 
     def self.set_verbosity(level)
-      msg = "Message verbosity level not recognised (#{})."
+      msg = "Message verbosity level not recognised (#{level})."
       raise msg unless @@logger_verbosity_levels.has_key? level.to_sym
 
       @@verbosity = level.to_sym
@@ -113,7 +113,7 @@ module Dr
         verbosity = :verbose unless verbosity
       end
 
-      if verbosity <= @@verbosity
+      if @@logger_verbosity_levels[verbosity] <= @@logger_verbosity_levels[@@verbosity]
         out << " " << msg.chomp
         puts out
         STDOUT.flush
