@@ -17,8 +17,8 @@ module Dr
           },
 
           :raspi_foundation => {
-            :url => "http://archive.raspberrypi.org/debian/",
-            :key => "http://archive.raspberrypi.org/debian/raspberrypi.gpg.key",
+            :url => "http://dev.kano.me/mirrors/raspberrypi/",
+            :key => "http://dev.kano.me/mirrors/raspberrypi/raspberrypi.gpg.key",
             :src => false,
             :codename => "wheezy",
             :components => "main"
