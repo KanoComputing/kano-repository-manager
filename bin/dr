@@ -539,6 +539,45 @@ class RepoCLI < ExtendedThor
   end
 
 
+  desc "suite-diff", "Show the differences between packages in two suites"
+  def suite_diff(first, second)
+    repo = get_repo_handle
+
+    first = repo.codename_to_suite first
+    if !first
+      log :err, "Can't find the #{first.fg 'blue'} suite in this repo"
+      raise "Suite doesn't exist"
+    end
+
+    second = repo.codename_to_suite second
+    if !second
+      log :err, "Can't find the #{second.fg 'blue'} suite in this repo"
+      raise "Suite doesn't exist"
+    end
+
+    log :info, "Showing the differences between #{first.fg 'green'} and #{second.fg 'red'}"
+    repo.list_packages(first).each do |pkg|
+      first_v = repo.get_subpackage_versions(pkg.name)[first].values.max
+
+      if !repo.suite_has_package? second, pkg.name
+        log :info, "#{pkg.name.fg 'orange'} is in #{first.fg 'green'} but not in #{second.fg 'red'}"
+        next
+      end
+
+      second_v = repo.get_subpackage_versions(pkg.name)[second].values.max
+      if Dr::PkgVersion.new(first_v) != Dr::PkgVersion.new(second_v)
+        log :info, "#{pkg.name.fg 'orange'} #{first_v.fg 'green'} != #{second_v.fg 'red'}"
+      end
+    end
+
+    repo.list_packages(second).each do |pkg|
+      if !repo.suite_has_package? first, pkg.name
+        log :info, "#{pkg.name.fg 'orange'} is in #{second.fg 'red'} but not in #{first.fg 'green'}"
+      end
+    end
+  end
+
+
   desc "force-sync", "Force cloning the sources repository from scratch again"
   method_option :url, :aliases => "-u", :type => :string,
                 :desc => "The URL to clone from"
