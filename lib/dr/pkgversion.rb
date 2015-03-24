@@ -114,7 +114,7 @@ module Dr
 
     private
     def today
-      Time.now.strftime "%Y%m%d"
+      Time.now.strftime("%Y%m%d").to_i
     end
 
     def compare(o)
