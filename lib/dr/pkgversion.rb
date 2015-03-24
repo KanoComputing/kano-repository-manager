@@ -12,6 +12,9 @@ module Dr
       @date = 0        # integer
       @build = 0       # integer
 
+      # Make sure the version is string
+      version_string = version_string.to_s
+
       v = version_string.split ":"
       if v.length > 1
         @epoch = v[0].to_i

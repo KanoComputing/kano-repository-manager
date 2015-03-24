@@ -9,6 +9,7 @@ require "dr/logger"
 require "dr/gnupg"
 require "dr/buildroot"
 require "dr/utils"
+require "dr/pkgversion"
 
 require "fileutils"
 require "yaml"
@@ -251,7 +252,8 @@ module Dr
 
       is_of_higher_version = true
       names.each do |name|
-        if used_versions.has_key?(name) && version <= used_versions[name]
+        if used_versions.has_key?(name) && 
+           PkgVersion.new(version) <= PkgVersion.new(used_versions[name])
           is_of_higher_version = false
         end
       end
