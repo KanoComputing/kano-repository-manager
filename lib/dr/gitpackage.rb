@@ -169,6 +169,7 @@ module Dr
         version = PkgVersion.new version_string
         log :info, "Source version: #{version.source.style "version"}"
 
+        version.add_build_tag
         while build_exists? version
           version.increment!
         end

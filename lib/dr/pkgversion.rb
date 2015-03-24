@@ -108,6 +108,10 @@ module Dr
       v
     end
 
+    def add_build_tag
+        @date = today
+    end
+
     private
     def today
       Time.now.strftime "%Y%m%d"
