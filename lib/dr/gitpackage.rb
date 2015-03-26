@@ -85,9 +85,9 @@ module Dr
         src_dir = "#{tmp}/src"
         FileUtils.mkdir_p src_dir
 
-        checkout branch, src_dir
+        checkout branch, src_dir, "#{tmp}/git"
 
-        unless File.exists? "#{tmp}/src/debian/control"
+        unless File.exists? "#{src_dir}/debian/control"
           log :err, "The debian packaging files not found in the repository"
           raise "Adding a package from #{git_addr} failed"
         end
@@ -424,9 +424,9 @@ EOS
       end
     end
 
-    def checkout(branch, dir)
+    def checkout(branch, dir, override_git_dir=@git_dir)
       log :info, "Extracting the sources"
-      git_cmd ="git --git-dir #{@git_dir} --bare archive " +
+      git_cmd ="git --git-dir #{override_git_dir} --bare archive " +
                "--format tar #{branch} | tar x -C #{dir}"
       ShellCmd.new git_cmd, :tag => "git", :show_out => true
     end
