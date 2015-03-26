@@ -78,7 +78,7 @@ module Dr
       log :info, "Re-downloading the source repository of " +
                  "#{@name.style "pkg-name"}"
       Dir.mktmpdir do |tmp|
-        git_cmd = "git clone --mirror --branch #{@default_branch} " +
+        git_cmd = "git clone --mirror --branch #{branch} " +
                   "#{git_addr} #{tmp}/git"
         ShellCmd.new git_cmd, :tag => "git", :show_out => true
 
