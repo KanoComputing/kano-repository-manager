@@ -144,7 +144,7 @@ module Dr
       version = nil
 
       unless get_rev branch
-        log :error,  "Branch #{branch.fg "blue"} not found in #{@name.style "pkg-name"}"
+        log :err,  "Branch #{branch.fg "blue"} not found in #{@name.style "pkg-name"}"
         raise "The requested branch doesn't exist in the repository!"
       end
 
@@ -210,7 +210,7 @@ module Dr
           end
 
         if repo_arches.length == 0
-          log :error, "#{@name.style "pkg-name"} cannot be build for any of " +
+          log :err, "#{@name.style "pkg-name"} cannot be build for any of " +
                       "the architectures supported by this repository"
           raise "Unable to build the package for this repository"
         end
