@@ -143,6 +143,11 @@ module Dr
 
       version = nil
 
+      unless get_rev branch
+        log :error,  "Branch #{branch.fg "blue"} not found in #{@name.style "pkg-name"}"
+        raise "The requested branch doesn't exist in the repository!"
+      end
+
       orig_rev, curr_rev = update_from_origin branch
       log :info, "Branch #{branch.fg "blue"}, revision #{curr_rev[0..7].fg "blue"}"
       unless force
