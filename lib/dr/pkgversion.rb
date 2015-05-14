@@ -82,6 +82,10 @@ module Dr
       compare(o) == 0
     end
 
+    def <=>(o)
+      compare(o)
+    end
+
     def to_s
       v = @upstream.clone
 
@@ -111,7 +115,7 @@ module Dr
       v
     end
 
-    def add_build_tag
+    def add_build_date
         @date = today
     end
 

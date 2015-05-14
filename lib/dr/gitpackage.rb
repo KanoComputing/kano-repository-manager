@@ -177,131 +177,147 @@ module Dr
         version = PkgVersion.new version_string
         log :info, "Source version: #{version.source.style "version"}"
 
-        version.add_build_tag
+        version.add_build_date
+        version = get_highest_build version
         while build_exists? version
           version.increment!
         end
         log :info, "Build version: #{version.to_s.style "version"}"
 
-        log :info, "Updating changelog"
-        now = Time.new.strftime("%a, %-d %b %Y %T %z")
-        ch_entry = "#{@name} (#{version}) kano; urgency=low\n"
-        ch_entry << "\n"
-        ch_entry << "  * Package rebuilt, updated to revision #{curr_rev[0..7]}.\n"
-        ch_entry << "\n"
-        ch_entry << " -- Team Kano <dev@kano.me>  #{now}\n\n"
+        # Reserve the version number for this build by creating the target
+        # directory for it.
+        target_dir = "#{@repo.location}/packages/#{@name}/builds/#{version}"
+        FileUtils.mkdir_p target_dir
 
-        changelog = ""
-        File.open "#{src_dir}/debian/changelog", "r" do |f|
-          changelog = f.read
-        end
+        begin
+          log :info, "Updating changelog"
+          now = Time.new.strftime("%a, %-d %b %Y %T %z")
+          ch_entry = "#{@name} (#{version}) kano; urgency=low\n"
+          ch_entry << "\n"
+          ch_entry << "  * Package rebuilt, updated to revision #{curr_rev[0..7]}.\n"
+          ch_entry << "\n"
+          ch_entry << " -- Team Kano <dev@kano.me>  #{now}\n\n"
 
-        File.open "#{src_dir}/debian/changelog", "w" do |f|
-          f.write ch_entry
-          f.write changelog
-        end
-
-        repo_arches = @repo.get_architectures
-        pkg_arches = get_architectures("#{src_dir}/debian/control")
-        arches = case
-          when pkg_arches.include?("any")
-            repo_arches
-          when pkg_arches.include?("all")
-            ["all"]
-          else
-            repo_arches & pkg_arches
+          changelog = ""
+          File.open "#{src_dir}/debian/changelog", "r" do |f|
+            changelog = f.read
           end
 
-        if repo_arches.length == 0
-          log :err, "#{@name.style "pkg-name"} cannot be build for any of " +
-                      "the architectures supported by this repository"
-          raise "Unable to build the package for this repository"
+          File.open "#{src_dir}/debian/changelog", "w" do |f|
+            f.write ch_entry
+            f.write changelog
+          end
+
+          repo_arches = @repo.get_architectures
+          pkg_arches = get_architectures("#{src_dir}/debian/control")
+          arches = case
+            when pkg_arches.include?("any")
+              repo_arches
+            when pkg_arches.include?("all")
+              ["all"]
+            else
+              repo_arches & pkg_arches
+            end
+
+          if repo_arches.length == 0
+            log :err, "#{@name.style "pkg-name"} cannot be build for any of " +
+                        "the architectures supported by this repository"
+            raise "Unable to build the package for this repository"
+          end
+
+          benv = :default
+          src_meta = get_configuration
+          if src_meta.has_key? :build_environment
+            benv = src_meta[:build_environment].to_sym
+          end
+
+          do_build arches, benv, version, src_dir, target_dir
+        rescue Exception => e
+          remove_build(version)
+          log :info, "Removing version reservation for #{version.to_s.style "version"}"
+          raise e
         end
 
-        benv = :default
-        src_meta = get_configuration
-        if src_meta.has_key? :build_environment
-          benv = src_meta[:build_environment].to_sym
+        log :info, "Writing package metadata"
+        File.open "#{target_dir}/.metadata", "w" do |f|
+          YAML.dump({"branch" => branch, "revision" => curr_rev}, f)
         end
+        log :info, "The #{@name.style "pkg-name"} package was " +
+                   "built successfully."
+      end
+      version
+    end
 
-        arches.each do |arch|
-          @repo.buildroot(arch, benv).open do |br|
-            log :info, "Building the #{@name.style "pkg-name"} package " +
-                       "version #{version.to_s.style "version"} for #{arch}"
+    def do_build(arches, benv, version, src_dir, target_dir)
+      arches.each do |arch|
+        @repo.buildroot(arch, benv).open do |br|
+          log :info, "Building the #{@name.style "pkg-name"} package " +
+                     "version #{version.to_s.style "version"} for #{arch}"
 
-            # Moving to the proper directory
-            build_dir_name = "#{@name}-#{version.upstream}"
-            build_dir = "#{br}/#{build_dir_name}"
-            FileUtils.cp_r src_dir, build_dir
+          # Moving to the proper directory
+          build_dir_name = "#{@name}-#{version.upstream}"
+          build_dir = "#{br}/#{build_dir_name}"
+          FileUtils.cp_r src_dir, build_dir
 
-            # Make orig tarball
-            all_files = Dir["#{build_dir}/*"] + Dir["#{build_dir}/.*"]
-            excluded_files = ['.', '..', '.git']
-            selected_files = all_files.select { |path| !excluded_files.include?(File.basename(path)) }
-            files = selected_files.map { |f| "\"#{File.basename f}\"" }.join " "
-            log :info, "Creating orig source tarball"
-            tar = "tar cz -C #{build_dir} --exclude=debian " +
-                  "-f #{br}/#{@name}_#{version.upstream}.orig.tar.gz " +
-                  "#{files}"
-            ShellCmd.new tar, :tag => "tar"
+          # Make orig tarball
+          all_files = Dir["#{build_dir}/*"] + Dir["#{build_dir}/.*"]
+          excluded_files = ['.', '..', '.git']
+          selected_files = all_files.select { |path| !excluded_files.include?(File.basename(path)) }
+          files = selected_files.map { |f| "\"#{File.basename f}\"" }.join " "
+          log :info, "Creating orig source tarball"
+          tar = "tar cz -C #{build_dir} --exclude=debian " +
+                "-f #{br}/#{@name}_#{version.upstream}.orig.tar.gz " +
+                "#{files}"
+          ShellCmd.new tar, :tag => "tar"
 
-            apt = "sudo chroot #{br} apt-get update"
-            deps = <<-EOS
+          apt = "sudo chroot #{br} apt-get update"
+          deps = <<-EOS
 sudo chroot #{br} <<EOF
 dpkg-source -b "/#{build_dir_name}"
 mk-build-deps *.dsc -i -t "apt-get --no-install-recommends -y"
 rm -rf #{@name}-build-deps_*
 EOF
 EOS
-          build = <<-EOS
+        build = <<-EOS
 sudo chroot #{br} <<EOF
 cd /#{build_dir_name}
 debuild -i -uc -us -b
 EOF
 EOS
 
-            log :info, "Updating the sources lists"
-            ShellCmd.new apt, :tag => "apt-get", :show_out => true
+          log :info, "Updating the sources lists"
+          ShellCmd.new apt, :tag => "apt-get", :show_out => true
 
-            log :info, "Installing build dependencies"
-            ShellCmd.new deps, :tag => "mk-build-deps", :show_out => true
+          log :info, "Installing build dependencies"
+          ShellCmd.new deps, :tag => "mk-build-deps", :show_out => true
 
-            log :info, "Building the package"
-            ShellCmd.new build, :tag => "debuild", :show_out => true
+          log :info, "Building the package"
+          ShellCmd.new build, :tag => "debuild", :show_out => true
 
-            debs = Dir["#{br}/*.deb"]
-            expected_pkgs = get_subpackage_names "#{src_dir}/debian/control"
-            expected_pkgs.each do |subpkg_name|
-              includes = debs.inject(false) do |r, n|
-                r || ((/^#{br}\/#{subpkg_name}_#{version}/ =~ n) != nil)
-              end
-
-              unless includes
-                log :err, "Subpackage #{subpkg_name} did not build properly"
-                raise "Building #{name} failed"
-              end
+          debs = Dir["#{br}/*.deb"]
+          expected_pkgs = get_subpackage_names "#{src_dir}/debian/control"
+          expected_pkgs.each do |subpkg_name|
+            includes = debs.inject(false) do |r, n|
+              r || ((/^#{br}\/#{subpkg_name}_#{version}/ =~ n) != nil)
             end
 
-            build_dir = "#{@repo.location}/packages/#{@name}/builds/#{version}"
-            FileUtils.mkdir_p build_dir
-            debs.each do |pkg|
-              FileUtils.cp pkg, build_dir
-
-              deb_filename = File.basename(pkg)
-              log :info, "Signing the #{deb_filename.style "subpkg-name"} package"
-              @repo.sign_deb "#{build_dir}/#{deb_filename}"
+            unless includes
+              log :err, "Subpackage #{subpkg_name} did not build properly"
+              raise "Building #{name} failed"
             end
+          end
 
-            log :info, "Writing package metadata"
-            File.open "#{build_dir}/.metadata", "w" do |f|
-              YAML.dump({"branch" => branch, "revision" => curr_rev}, f)
-            end
-            log :info, "The #{@name.style "pkg-name"} package was " +
-                       "built successfully."
+          # Copy the debs from the build directory to the final location in
+          # the repository tree
+          debs.each do |pkg|
+            FileUtils.cp pkg, target_dir
+
+            deb_filename = File.basename(pkg)
+            log :info, "Signing the #{deb_filename.style "subpkg-name"} package"
+            @repo.sign_deb "#{target_dir}/#{deb_filename}"
           end
         end
       end
-      version
     end
 
     def tag_release(tag_name, revision, options={})
