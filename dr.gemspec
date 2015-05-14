@@ -28,6 +28,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency "thor", "~> 0.18"
   spec.add_dependency "tco", "~> 0.1"
   spec.add_dependency "octokit", "~> 3.3"
+  spec.add_dependency "sinatra", "~> 1.4"
 
   spec.add_development_dependency "bundler", "~> 1.5"
   spec.add_development_dependency "rake", "~> 10.3"
