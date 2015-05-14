@@ -236,6 +236,8 @@ module Dr
         version = pkg.history[0]
       end
 
+      pkg.check_build version
+
       if suite
         cmp = get_suites.map { |n, cn| suite == n || suite == cn }
         suite_exists = cmp.inject(false) { |r, o| r || o }
