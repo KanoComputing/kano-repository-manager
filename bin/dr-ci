@@ -1,12 +1,106 @@
 #!/usr/bin/env ruby
 
+# coding: utf-8
+lib = File.expand_path('../lib', __FILE__)
+$LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
+
 require 'sinatra'
 require 'json'
+require 'scriptster'
+require 'eventmachine'
 
-set :port, 4567
+require 'dr/repo'
+require 'dr/config'
+
+puts Dr.config.default_repo
+repo = if Dr.config.default_repo != nil
+  Dr::Repo.new Dr.config.repositories[Dr.config.default_repo][:location]
+else
+  log :err, "Default repository must be configured to use dr-ci. Please set it int /etc/dr.conf."
+  exit 1
+end
+
+set :port, 1337
 set :bind, '0.0.0.0'
+set :server, 'thin'
 
-post '/payload' do
+builds = []
+
+class BuildStatus
+  attr_reader :status, :pkg
+
+  def initialize(pkg)
+    @pkg = pkg
+    @status = "inactive"
+  end
+
+  def start
+    @status = "started"
+  end
+
+  def success
+    @status = "successful"
+  end
+
+  def failure
+    @status = "failed"
+  end
+end
+
+post '/github-hook' do
   push = JSON.parse(request.body.read)
-  puts "I got some JSON: #{push.inspect}"
+  #p push.inspect
+  branch = push['ref'].split("/")[-1]
+  urls = [
+    push['repository']['html_url'],
+    push['repository']['git_url'],
+    push['repository']['ssh_url'],
+    push['repository']['clone_url']
+  ]
+  p branch
+  p urls
+
+  pkgs = repo.list_packages.select {|p| p.is_a? Dr::GitPackage}
+  matched = []
+  pkgs.each do |pkg|
+    matched.push(pkg) if urls.include? pkg.get_repo_url
+  end
+
+  case matched.length
+  when 0
+    puts "This repository isn't associated with a package, skipping"
+  when 1
+    pkg = matched[0]
+    puts "This repository is associated with #{pkg.name}, rebuilding ..."
+
+    cmd = if branch == pkg.default_branch
+      "dr build #{pkg.name} -b #{branch} -p"
+    else
+      "dr build #{pkg.name} -b #{branch}"
+    end
+
+    b = BuildStatus.new pkg
+    builds.push b
+    b.start
+    "build started"
+    EM.defer do
+      process = Dr::ShellCmd.new cmd, :tag => "dr-build"
+      puts process.out
+      if process.status == 0
+        b.success
+      else
+        b.failure
+      end
+    end
+  else
+    puts "This repository is associated with multiple packages. This isn't supported by the CI."
+  end
+end
+
+get '/' do
+  list = ""
+  builds.reverse.each do |b|
+    list += "#{b.pkg.name} #{b.status}\n"
+  end
+  "Hi!\n" + list
 end
