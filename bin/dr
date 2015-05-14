@@ -667,4 +667,5 @@ rescue StandardError => e
     line = "  #{line}" if line.length > 0 && line[0] == '/'
     Dr::Logger.log :err, line.fg("grey")
   end
+  exit 1
 end
