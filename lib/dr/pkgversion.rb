@@ -86,7 +86,7 @@ module Dr
       v = @upstream.clone
 
       if @epoch > 0
-        v = "#{@epoch}:{v}"
+        v = "#{@epoch}:#{v}"
       end
 
       if @debian.length > 0
