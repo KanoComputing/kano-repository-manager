@@ -81,12 +81,16 @@ module Dr
     }
 
     @@verbosity = :verbose
+    @@log_file = nil
     @@logger_verbosity_levels = {
       :essential => 0,
       :important => 1,
       :informative => 2,
       :verbose => 3
     }
+    def self.set_logfile(file)
+      @@log_file = file
+    end
 
     def self.set_verbosity(level)
       msg = "Message verbosity level not recognised (#{})."
@@ -117,6 +121,10 @@ module Dr
         out << " " << msg.chomp
         puts out
         STDOUT.flush
+        if not @@log_file.nil?
+           @@log_file.puts out
+           @@log_file.flush
+        end
       end
     end
 
