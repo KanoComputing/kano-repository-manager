@@ -82,10 +82,10 @@ module Dr
       compare(o) == 0
     end
 
-    def to_s
+    def to_s(omit_epoch=false)
       v = @upstream.clone
 
-      if @epoch > 0
+      if @epoch > 0 and not omit_epoch
         v = "#{@epoch}:#{v}"
       end
 

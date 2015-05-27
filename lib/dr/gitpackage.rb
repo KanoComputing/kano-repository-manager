@@ -271,7 +271,7 @@ EOS
             expected_pkgs = get_subpackage_names "#{src_dir}/debian/control"
             expected_pkgs.each do |subpkg_name|
               includes = debs.inject(false) do |r, n|
-                r || ((/^#{br}\/#{subpkg_name}_#{version}/ =~ n) != nil)
+                r || ((/^#{br}\/#{subpkg_name}_#{version.to_s omit_epoch=true}/ =~ n) != nil)
               end
 
               unless includes
