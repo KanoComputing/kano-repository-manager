@@ -1,5 +1,7 @@
 # Kano Repository Manager
 
+[![Join the chat at https://gitter.im/KanoComputing/kano-repository-manager](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/KanoComputing/kano-repository-manager?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 [![Gem Version](https://badge.fury.io/rb/dr.svg)](http://badge.fury.io/rb/dr)
 
 **dr** (stands for debian repository) is a Debian repository management tool.
