@@ -81,13 +81,15 @@ module Dr
     }
 
     @@verbosity = :verbose
-    @@log_file = nil
     @@logger_verbosity_levels = {
       :essential => 0,
       :important => 1,
       :informative => 2,
       :verbose => 3
     }
+
+    @@log_file = nil
+
     def self.set_logfile(file)
       @@log_file = file
     end
@@ -121,8 +123,9 @@ module Dr
         out << " " << msg.chomp
         puts out
         STDOUT.flush
-        if not @@log_file.nil?
-           @@log_file.puts out
+
+        unless @@log_file.nil?
+           @@log_file.puts strip_colours out
            @@log_file.flush
         end
       end
@@ -134,6 +137,11 @@ module Dr
 
     def tag(tag, msg)
       tag.fg("blue").bg("dark-grey") << " " << msg
+    end
+
+    private
+    def self.strip_colours(string)
+      string.gsub(/\033\[[0-9]+(;[0-9]+){0,2}m/, '')
     end
   end
 end
