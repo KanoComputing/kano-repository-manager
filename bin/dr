@@ -27,6 +27,10 @@ class ExtendedThor < Thor
   def initialize(*args)
     super
     Dr::Logger::set_verbosity options[:verbosity]
+    if not options[:log_file].nil?
+      file = File.open options[:log_file],"w"
+      Dr::Logger::set_logfile(file)
+    end
   end
 
 
@@ -245,6 +249,7 @@ end
 class RepoCLI < ExtendedThor
   class_option :repo, :type => :string, :aliases => "-r"
   class_option :verbosity, :type => :string, :aliases => "-v", :default => "verbose"
+  class_option :log_file, :type => :string, :aliases => "-l", :default => nil
 
 
   desc "init [LOCATION]", "setup a whole new repository from scratch"

@@ -88,6 +88,12 @@ module Dr
       :verbose => 3
     }
 
+    @@log_file = nil
+
+    def self.set_logfile(file)
+      @@log_file = file
+    end
+
     def self.set_verbosity(level)
       msg = "Message verbosity level not recognised (#{})."
       raise msg unless @@logger_verbosity_levels.has_key? level.to_sym
@@ -117,6 +123,11 @@ module Dr
         out << " " << msg.chomp
         puts out
         STDOUT.flush
+
+        unless @@log_file.nil?
+           @@log_file.puts strip_colours out
+           @@log_file.flush
+        end
       end
     end
 
@@ -126,6 +137,11 @@ module Dr
 
     def tag(tag, msg)
       tag.fg("blue").bg("dark-grey") << " " << msg
+    end
+
+    private
+    def self.strip_colours(string)
+      string.gsub(/\033\[[0-9]+(;[0-9]+){0,2}m/, '')
     end
   end
 end
