@@ -22,6 +22,10 @@ module Dr
 
     attr_reader :location
 
+    def get_archive_path
+      "#{@location}/archive"
+    end
+
     def initialize(loc)
       @location = File.expand_path loc
 

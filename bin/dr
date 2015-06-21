@@ -17,6 +17,7 @@ require "dr/pkgversion"
 require "dr/shellcmd"
 require "dr/logger"
 require "dr/config"
+require "dr/server"
 
 
 class ExtendedThor < Thor
@@ -644,11 +645,21 @@ class RepoCLI < ExtendedThor
           end
         elsif number != nil && kept >= number.to_i
             rmbuild pkg.name, version_string
-        else 
+        else
           kept += 1
         end
       end
     end
+  end
+
+  desc "serve", "Start the archive server"
+  method_option :port, :aliases => "-p", :type => :number,
+                :desc => "The port to run the server on", :default => 80
+  method_option :route, :aliases => "-R", :type => :string,
+                :desc => "The route to serve the archive on", :default => '/'
+  def serve
+    repo = get_repo_handle
+    Dr:Server.new options["port"], options["route"], repo.get_archive_path
   end
 end
 
