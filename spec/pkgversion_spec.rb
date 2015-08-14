@@ -12,21 +12,21 @@ describe Dr do
         one = Dr::PkgVersion.new('1:1.5-1')
         two = Dr::PkgVersion.new('2:1.5-1')
 
-        expect(one < two).to be_true
+        expect(one < two).to be true
       end
 
       it "works when equal" do
         one = Dr::PkgVersion.new('1:2.7-2')
         two = Dr::PkgVersion.new('1:2.7-2')
 
-        expect(one == two).to be_true
+        expect(one == two).to be true
       end
 
       it "works when smaller" do
         one = Dr::PkgVersion.new('2:3.6-1')
         two = Dr::PkgVersion.new('1:3.5')
 
-        expect(one > two).to be_true
+        expect(one > two).to be true
       end
     end
 
@@ -35,42 +35,42 @@ describe Dr do
         one = Dr::PkgVersion.new('1:1.5-1')
         two = Dr::PkgVersion.new('1:1.6-1')
 
-        expect(one < two).to be_true
+        expect(one < two).to be true
       end
 
       it "works when smaller" do
         one = Dr::PkgVersion.new('1-1')
         two = Dr::PkgVersion.new('2')
 
-        expect(one < two).to be_true
+        expect(one < two).to be true
       end
 
       it "works when smaller with string inbetween" do
         one = Dr::PkgVersion.new('1.5')
         two = Dr::PkgVersion.new('1.16-5')
 
-        expect(one < two).to be_true
+        expect(one < two).to be true
       end
 
       it "works when equal" do
         one = Dr::PkgVersion.new('1.5-5')
         two = Dr::PkgVersion.new('1.5-5')
 
-        expect(one == two).to be_true
+        expect(one == two).to be true
       end
 
       it "equal with no debian version" do
         one = Dr::PkgVersion.new('15')
         two = Dr::PkgVersion.new('15')
 
-        expect(one == two).to be_true
+        expect(one == two).to be true
       end
 
       it "works when bigger" do
         one = Dr::PkgVersion.new('6.5')
         two = Dr::PkgVersion.new('1.16-5')
 
-        expect(one > two).to be_true
+        expect(one > two).to be true
       end
     end
 
@@ -79,28 +79,28 @@ describe Dr do
         one = Dr::PkgVersion.new('1.5-1')
         two = Dr::PkgVersion.new('1.5-2')
 
-        expect(one < two).to be_true
+        expect(one < two).to be true
       end
 
       it "equal comparison" do
         one = Dr::PkgVersion.new('1.5-2')
         two = Dr::PkgVersion.new('1.5-2')
 
-        expect(one == two).to be_true
+        expect(one == two).to be true
       end
 
       it "bigger comparison" do
         one = Dr::PkgVersion.new('1.5-11')
         two = Dr::PkgVersion.new('1.5-9')
 
-        expect(one > two).to be_true
+        expect(one > two).to be true
       end
 
       it "substring comparison" do
         one = Dr::PkgVersion.new('1.5-111')
         two = Dr::PkgVersion.new('1.5-11')
 
-        expect(one > two).to be_true
+        expect(one > two).to be true
       end
     end
 
@@ -131,49 +131,49 @@ describe Dr do
         one = Dr::PkgVersion.new('1.5-7.20150320')
         two = Dr::PkgVersion.new('1.5-7.20150323')
 
-        expect(one < two).to be_true
+        expect(one < two).to be true
       end
 
       it "bigger date" do
         one = Dr::PkgVersion.new('1.5-7.20150328')
         two = Dr::PkgVersion.new('1.5-7.20150323')
 
-        expect(one > two).to be_true
+        expect(one > two).to be true
       end
 
       it "equal dates" do
         one = Dr::PkgVersion.new('1.5-7.20150328')
         two = Dr::PkgVersion.new('1.5-7.20150328')
 
-        expect(one == two).to be_true
+        expect(one == two).to be true
       end
 
       it "equal dates with build numbers (smaller)" do
         one = Dr::PkgVersion.new('1.5-7.20150328build1')
         two = Dr::PkgVersion.new('1.5-7.20150328build5')
 
-        expect(one < two).to be_true
+        expect(one < two).to be true
       end
 
       it "equal dates with build numbers (equal)" do
         one = Dr::PkgVersion.new('1.5-7.20150328build15')
         two = Dr::PkgVersion.new('1.5-7.20150328build15')
 
-        expect(one == two).to be_true
+        expect(one == two).to be true
       end
 
       it "equal dates with build numbers (bigger)" do
         one = Dr::PkgVersion.new('1.5-7.20150328build15')
         two = Dr::PkgVersion.new('1.5-7.20150328build5')
 
-        expect(one > two).to be_true
+        expect(one > two).to be true
       end
 
       it "build number substrings" do
         one = Dr::PkgVersion.new('1.5-7.20150328build11')
         two = Dr::PkgVersion.new('1.5-7.20150328build111')
 
-        expect(one < two).to be_true
+        expect(one < two).to be true
       end
     end
   end
