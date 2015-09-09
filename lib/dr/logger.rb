@@ -14,6 +14,7 @@ tco_conf.names["purple"] = "#90559e"
 tco_conf.names["blue"] = "#4D9EEB" #"#1b8efa"
 tco_conf.names["orange"] = "#ff842a"
 tco_conf.names["brown"] = "#6a4a3c"
+tco_conf.names["magenta"] = "#ff00ff"
 
 tco_conf.styles["info"] = {
   :fg => "green",
