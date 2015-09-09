@@ -554,8 +554,8 @@ class RepoCLI < ExtendedThor
 
     log :info, "Releasing pkg #{pkg_name.style "pkg-name"} package from testing to stable-security"
 
-    if ! repo.suite_has_package? "testing", pkg_name
-      log :error, "Package  #{pkg_name.style "pkg-name"} not in testing"
+    if !repo.suite_has_package? "testing", pkg_name
+      log :err, "Package  #{pkg_name.style "pkg-name"} not in testing"
       raise "Package #{pkg_name.style "pkg-name"} doesn't exist in the repo"
     end
 
@@ -564,7 +564,7 @@ class RepoCLI < ExtendedThor
       print "Are you absolutely sure you want to push package #{pkg_name.style "pkg-name"} to stable-security?"
       response = gets.strip.downcase
       if response == 'n'
-        log :error, "Didn't confirm releasing to stable-security"
+        log :err, "Didn't confirm releasing to stable-security"
         raise "Couldn't confirm for releasing to stable-security"
       elsif response == 'y'
         log :info, "Received confirmation, will carry on"
