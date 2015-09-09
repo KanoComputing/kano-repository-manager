@@ -546,6 +546,26 @@ class RepoCLI < ExtendedThor
   end
 
 
+  desc "release-security", "Push a package from testing to stable-security suite"
+  method_option :force, :aliases => "-f", :type => :boolean,
+                :desc => "Force-push the released package"
+  def release_security(pkg_name)
+    repo = get_repo_handle
+
+    log :info, "Releasing pkg #{pkg_name.style "pkg-name"} package from testing to stable-security"
+
+    if ! repo.suite_has_package? "testing", pkg_name
+        log :error, "Pacakge  #{pkg_name.style "pkg-name"} not in testing"
+        raise "Package #{pkg_name.style "pkg-name"} doesn't exist in the repo"
+    end
+    v = repo.get_subpackage_versions(pkg_name)["testing"].values
+    begin
+      repo.push pkg_name, v.max, "stable.security", (options["force"] == true)
+    rescue Dr::AlreadyExists
+      ;
+    end
+  end
+
   desc "suite-diff", "Show the differences between packages in two suites"
   def suite_diff(first, second)
     repo = get_repo_handle
