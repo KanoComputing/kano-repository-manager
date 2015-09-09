@@ -562,7 +562,7 @@ class RepoCLI < ExtendedThor
     response = 'x'
     while ! ['y', 'n'].include? response
       print "Are you absolutely sure you want to push package #{pkg_name.style "pkg-name"} to stable-security?"
-      response = gets.strip.downcase
+      response = STDIN.gets.strip.downcase
       if response == 'n'
         log :err, "Didn't confirm releasing to stable-security"
         raise "Couldn't confirm for releasing to stable-security"
