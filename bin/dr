@@ -558,6 +558,21 @@ class RepoCLI < ExtendedThor
       log :error, "Package  #{pkg_name.style "pkg-name"} not in testing"
       raise "Package #{pkg_name.style "pkg-name"} doesn't exist in the repo"
     end
+
+    response = 'n'
+    while ['y', 'n'].include? response
+      print "Are you absolutely sure you want to push package #{pkg_name.style "pkg-name"} to stable-security?"
+      response = gets.strip.downcase
+      if response == 'n'
+        log :error, "Didn't confirm releasing to stable-security"
+        raise "Couldn't confirm for releasing to stable-security"
+      elsif response == 'y'
+        log :info, "Received confirmation, will carry on"
+      else
+        print "Not an acceptable answer, please answer y/n"
+      end
+    end
+
     v = repo.get_subpackage_versions(pkg_name)["testing"].values
     begin
       repo.push pkg_name, v.max, "stable-security", (options["force"] == true)
