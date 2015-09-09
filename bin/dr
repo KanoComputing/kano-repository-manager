@@ -190,6 +190,7 @@ class List < ExtendedThor
           codename = suite if codename == nil
 
           colour = case suite
+          when "stable-security" then "magenta"
           when "stable" then "red"
           when "testing" then "yellow"
           when "unstable" then "green"
@@ -262,7 +263,7 @@ class RepoCLI < ExtendedThor
       :desc => "",
       :arches => ["amd64"],
       :components => ["main"],
-      :suites => ["stable", "testing", "unstable"],
+      :suites => ["stable-security", "stable", "testing", "unstable"],
       :build_environment => :kano,
       :codenames => []
     }
