@@ -559,8 +559,8 @@ class RepoCLI < ExtendedThor
       raise "Package #{pkg_name.style "pkg-name"} doesn't exist in the repo"
     end
 
-    response = 'n'
-    while ['y', 'n'].include? response
+    response = 'x'
+    while ! ['y', 'n'].include? response
       print "Are you absolutely sure you want to push package #{pkg_name.style "pkg-name"} to stable-security?"
       response = gets.strip.downcase
       if response == 'n'
@@ -569,7 +569,7 @@ class RepoCLI < ExtendedThor
       elsif response == 'y'
         log :info, "Received confirmation, will carry on"
       else
-        print "Not an acceptable answer, please answer y/n"
+        print "Not an acceptable answer, please answer y/n\n"
       end
     end
 
