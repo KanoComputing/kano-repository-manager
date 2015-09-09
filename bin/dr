@@ -555,8 +555,8 @@ class RepoCLI < ExtendedThor
     log :info, "Releasing pkg #{pkg_name.style "pkg-name"} package from testing to stable-security"
 
     if ! repo.suite_has_package? "testing", pkg_name
-        log :error, "Pacakge  #{pkg_name.style "pkg-name"} not in testing"
-        raise "Package #{pkg_name.style "pkg-name"} doesn't exist in the repo"
+      log :error, "Package  #{pkg_name.style "pkg-name"} not in testing"
+      raise "Package #{pkg_name.style "pkg-name"} doesn't exist in the repo"
     end
     v = repo.get_subpackage_versions(pkg_name)["testing"].values
     begin
