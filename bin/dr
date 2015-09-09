@@ -560,7 +560,7 @@ class RepoCLI < ExtendedThor
     end
     v = repo.get_subpackage_versions(pkg_name)["testing"].values
     begin
-      repo.push pkg_name, v.max, "stable.security", (options["force"] == true)
+      repo.push pkg_name, v.max, "stable-security", (options["force"] == true)
     rescue Dr::AlreadyExists
       ;
     end
