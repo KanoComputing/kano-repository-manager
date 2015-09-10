@@ -188,28 +188,22 @@ class List < ExtendedThor
       else
         suites.each do |suite, codename|
           codename = suite if codename == nil
+          colour = suite_to_colour suite
 
-          colour = case suite
-          when "stable-security" then "magenta"
-          when "stable" then "red"
-          when "testing" then "yellow"
-          when "unstable" then "green"
-          else nil end
-
-            all_included = true
-            subpkgs.each do |subpkg|
-              unless repo.query_for_deb_version(suite, subpkg) == version
-                all_included = false
-              end
+          all_included = true
+          subpkgs.each do |subpkg|
+            unless repo.query_for_deb_version(suite, subpkg) == version
+              all_included = false
             end
+          end
 
-            if all_included
-              if colour
-                line << " " + open + codename.fg(colour) + close
-              else
-                line << " " + open + codename + close
-              end
+          if all_included
+            if colour
+              line << " " + open + codename.fg(colour) + close
+            else
+              line << " " + open + codename + close
             end
+          end
         end
       end
       log :info, "  #{line}"
@@ -254,15 +248,21 @@ class List < ExtendedThor
 
     suites.each do |suite, codename|
       codename = suite if codename == nil
+      colour = suite_to_colour suite
 
-      colour = case suite
-          when "stable-security" then "magenta"
-          when "stable" then "red"
-          when "testing" then "yellow"
-          when "unstable" then "green"
-          else nil end
       log :info, "#{codename.fg colour}: #{suite}"
     end
+  end
+
+  private
+  def suite_to_colour(suite)
+    colour = case suite
+      when "stable-security" then "magenta"
+      when "stable" then "red"
+      when "testing" then "yellow"
+      when "unstable" then "green"
+      else nil end
+    return colour
   end
 end
 
