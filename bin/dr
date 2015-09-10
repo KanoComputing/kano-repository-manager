@@ -66,7 +66,7 @@ class Archive < ExtendedThor
 end
 
 class Conf < ExtendedThor
-  desc "repo", "Configuration of the whole repository"
+  desc "repo KEY [VALUE]", "Configuration of the whole repository"
   def repo(key, value=nil)
     repo = get_repo_handle
 
@@ -80,7 +80,7 @@ class Conf < ExtendedThor
     end
   end
 
-  desc "package", "Package-specific configuration options"
+  desc "package PKG-NAME KEY [VALUE]", "Package-specific configuration options"
   def package(pkg_name, key, value=nil)
     repo = get_repo_handle
     pkg = repo.get_package pkg_name
@@ -150,13 +150,13 @@ class List < ExtendedThor
     end
   end
 
-  desc "versions PACKAGE", "DEPRECATED, please use builds instead"
+  desc "versions PKG-NAME", "DEPRECATED, please use builds instead"
   def versions(pkg_name)
     log :warn, "This subcommand is deprecated, please use builds instead"
     builds pkg_name
   end
 
-  desc "builds PACKAGE", "Show the history of all builds of a package"
+  desc "builds PKG-NAME", "Show the history of all builds of a package"
   def builds(pkg_name)
     repo = get_repo_handle
     log :info, "Listing all buils of #{pkg_name.style "pkg-name"}"
@@ -387,7 +387,7 @@ class RepoCLI < ExtendedThor
   end
 
 
-  desc "build [pkg-name]", "build a package from the sources"
+  desc "build PKG-NAME", "build a package from the sources"
   method_option :branch, :aliases => "-b", :type => :string,
                 :desc => "build from a different branch"
   method_option :push, :aliases => "-p", :type => :string,
@@ -424,7 +424,7 @@ class RepoCLI < ExtendedThor
   end
 
 
-  desc "push [pkg-name]", "push a built package to a specified suite"
+  desc "push PKG-NAME", "push a built package to a specified suite"
   method_option :suite, :aliases => "-s", :type => :string,
                 :desc => "the target suite (defaults to testing)"
   method_option :build, :aliases => "-b", :type => :string,
@@ -448,7 +448,7 @@ class RepoCLI < ExtendedThor
   end
 
 
-  desc "unpush [pkg-name] [suite]", "remove a built package from a suite"
+  desc "unpush PKG-NAME SUITE", "remove a built package from a suite"
   def unpush(pkg_name, suite)
     repo = get_repo_handle
     repo.unpush pkg_name, suite
@@ -472,7 +472,7 @@ class RepoCLI < ExtendedThor
   end
 
 
-  desc "rmbuild [pkg-name] [version]", "remove a built version of a package"
+  desc "rmbuild PKG-NAME VERSION", "remove a built version of a package"
   method_option :force, :aliases => "-f", :type => :boolean,
                 :desc => "force removal even if the build is still used"
   def rmbuild(pkg_name, version)
@@ -480,7 +480,7 @@ class RepoCLI < ExtendedThor
     repo.remove_build pkg_name, version, options["force"] == true
   end
 
-  desc "update", "Update and rebuild (if necessary) all the packages in the suite"
+  desc "update [SUITE]", "Update and rebuild (if necessary) all the packages in the suite"
   def update(suite="testing")
     log :info, "Updating all packages in the #{suite.fg "blue"} suite"
     repo = get_repo_handle
@@ -512,7 +512,7 @@ class RepoCLI < ExtendedThor
   end
 
 
-  desc "git-tag-release", "Mark relased packages' repositories"
+  desc "git-tag-release TAG", "Mark relased packages' repositories"
   method_option :force, :aliases => "-f", :type => :boolean,
                 :desc => "Force override existing tags"
   method_option :package, :aliases => "-p", :type => :string,
@@ -572,7 +572,7 @@ class RepoCLI < ExtendedThor
   end
 
 
-  desc "release-security [pkg-name]", "Push a built package from testing to 'stable-security' suite"
+  desc "release-security PKG-NAME", "Push a built package from testing to 'stable-security' suite"
   method_option :force, :aliases => "-f", :type => :boolean,
                 :desc => "Force-push the released package"
   def release_security(pkg_name)
@@ -600,7 +600,7 @@ class RepoCLI < ExtendedThor
     end
   end
 
-  desc "suite-diff", "Show the differences between packages in two suites"
+  desc "suite-diff SUITE OTHER-SUITE", "Show the differences between packages in two suites"
   def suite_diff(first, second)
     repo = get_repo_handle
 
@@ -639,7 +639,7 @@ class RepoCLI < ExtendedThor
   end
 
 
-  desc "force-sync", "Force cloning the sources repository from scratch again"
+  desc "force-sync PKG-NAME", "Force cloning the sources repository from scratch again"
   method_option :url, :aliases => "-u", :type => :string,
                 :desc => "The URL to clone from"
   method_option :branch, :aliases => "-b", :type => :string,
