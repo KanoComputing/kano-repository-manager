@@ -702,7 +702,7 @@ class RepoCLI < ExtendedThor
     response = 'x'
     while ! ['y', 'n'].include? response
       print prompt_msg
-      print "[Y/y/N/n]:"
+      print "[Y/y/N/n]: "
       response = STDIN.gets.strip.downcase
       if response == 'n'
         log :err, "Replied negatively to prompt, aborting..."
