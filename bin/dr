@@ -415,7 +415,7 @@ class RepoCLI < ExtendedThor
       if options["push"] == "push"
         repo.push pkg.name, version, "testing" # FIXME: should be configurable
       else
-        if repo.codename_to_suite options["push"] == 'stable-security'
+        if repo.codename_to_suite(options["push"]) == 'stable-security'
           raise "Package built, but can't push to #{options["push"]}, use the 'release-security' subcommand"
         end
         repo.push pkg.name, version, options["push"]
@@ -437,8 +437,8 @@ class RepoCLI < ExtendedThor
     suite = nil
     suite = options["suite"] if options.has_key? "suite"
 
-    if repo.codename_to_suite options["push"] == 'stable-security'
-      raise "Can't push package to #{options["push"]}, please use the 'release-security' subcommand"
+    if repo.codename_to_suite(options["suite"]) == 'stable-security'
+      raise "Can't push package to #{options["suite"]}, please use the 'release-security' subcommand"
     end
 
     version = nil
