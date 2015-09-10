@@ -556,8 +556,6 @@ class RepoCLI < ExtendedThor
   desc "release-security [pkg-name]", "Push a built package from testing to 'stable-security' suite"
   method_option :force, :aliases => "-f", :type => :boolean,
                 :desc => "Force-push the released package"
-  method_option :build, :aliases => "-b", :type => :string,
-                :desc => "which version to push (defaults to the highest one built)"
   def release_security(pkg_name)
     repo = get_repo_handle
 
@@ -574,15 +572,8 @@ class RepoCLI < ExtendedThor
     negative_msg = "Couldn't confirm for releasing to stable-security"
     prompt_to_confirm prompt_msg, negative_msg
 
-    if options.has_key? "build"
-      version = options["build"]
-      if !repo.get_subpackage_versions(pkg_name)[suite_source].value? version
-        log :err, "Suite '#{suite_source}' doesn't include the specified package version"
-        raise "Build #{version.style "version"} doesn't exist in suite '#{suite_source}'"
-      end
-    else
-      version = repo.get_subpackage_versions(pkg_name)[suite_source].values.max
-    end
+    version = repo.get_subpackage_versions(pkg_name)[suite_source].values.max
+    log :info, "Package version #{version.style "version"} found in '#{suite_source}'"
     begin
       repo.push pkg_name, version, "stable-security", (options["force"] == true)
     rescue Dr::AlreadyExists
