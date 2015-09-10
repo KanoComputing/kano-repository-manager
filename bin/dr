@@ -245,6 +245,25 @@ class List < ExtendedThor
       end
     end
   end
+
+  desc "suites", "Show the codenames of the configured suites"
+  def suites
+    repo = get_repo_handle
+
+    suites = repo.get_suites
+
+    suites.each do |suite, codename|
+      codename = suite if codename == nil
+
+      colour = case suite
+          when "stable-security" then "magenta"
+          when "stable" then "red"
+          when "testing" then "yellow"
+          when "unstable" then "green"
+          else nil end
+      log :info, "#{codename.fg colour}: #{suite}"
+    end
+  end
 end
 
 
