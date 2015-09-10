@@ -576,7 +576,7 @@ class RepoCLI < ExtendedThor
 
     if options.has_key? "build"
       version = options["build"]
-      if repo.get_subpackage_versions(pkg_name)[suite_source].value? version
+      if !repo.get_subpackage_versions(pkg_name)[suite_source].value? version
         log :err, "Suite '#{suite_source}' doesn't include the specified package version"
         raise "Build #{version.style "version"} doesn't exist in suite '#{suite_source}'"
       end
