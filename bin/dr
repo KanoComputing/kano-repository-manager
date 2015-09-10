@@ -396,6 +396,9 @@ class RepoCLI < ExtendedThor
       if options["push"] == "push"
         repo.push pkg.name, version, "testing" # FIXME: should be configurable
       else
+        if repo.codename_to_suite options["push"] == 'stable-security'
+          raise "Package built, but can't push to #{options["push"]}, use the 'release-security' subcommand"
+        end
         repo.push pkg.name, version, options["push"]
       end
     end
@@ -414,6 +417,10 @@ class RepoCLI < ExtendedThor
 
     suite = nil
     suite = options["suite"] if options.has_key? "suite"
+
+    if repo.codename_to_suite options["push"] == 'stable-security'
+      raise "Can't push package to #{options["push"]}, please use the 'release-security' subcommand"
+    end
 
     version = nil
     version = options["build"] if options.has_key? "build"
@@ -546,26 +553,38 @@ class RepoCLI < ExtendedThor
   end
 
 
-  desc "release-security", "Push a package from testing to stable-security suite"
+  desc "release-security [pkg-name]", "Push a built package from testing to 'stable-security' suite"
   method_option :force, :aliases => "-f", :type => :boolean,
                 :desc => "Force-push the released package"
+  method_option :build, :aliases => "-b", :type => :string,
+                :desc => "which version to push (defaults to the highest one built)"
   def release_security(pkg_name)
     repo = get_repo_handle
 
-    log :info, "Releasing pkg #{pkg_name.style "pkg-name"} package from testing to stable-security"
+    suite_source = 'testing'
 
-    if !repo.suite_has_package? "testing", pkg_name
-      log :err, "Package  #{pkg_name.style "pkg-name"} not in testing"
+    log :info, "Releasing pkg #{pkg_name.style "pkg-name"} package from '#{suite_source}' to 'stable-security'"
+
+    if !repo.suite_has_package? suite_source, pkg_name
+      log :err, "Package  #{pkg_name.style "pkg-name"} not in '#{suite_source}'"
       raise "Package #{pkg_name.style "pkg-name"} doesn't exist in the repo"
     end
 
-    prompt_msg = "Are you absolutely sure you want to push package #{pkg_name.style "pkg-name"} to stable-security?"
+    prompt_msg = "Are you absolutely sure you want to push package #{pkg_name.style "pkg-name"} to 'stable-security'?"
     negative_msg = "Couldn't confirm for releasing to stable-security"
     prompt_to_confirm prompt_msg, negative_msg
 
-    v = repo.get_subpackage_versions(pkg_name)["testing"].values
+    if options.has_key? "build"
+      version = options["build"]
+      if repo.get_subpackage_versions(pkg_name)[suite_source].value? version
+        log :err, "Suite '#{suite_source}' doesn't include the specified package version"
+        raise "Build #{version.style "version"} doesn't exist in suite '#{suite_source}'"
+      end
+    else
+      version = repo.get_subpackage_versions(pkg_name)[suite_source].values.max
+    end
     begin
-      repo.push pkg_name, v.max, "stable-security", (options["force"] == true)
+      repo.push pkg_name, version, "stable-security", (options["force"] == true)
     rescue Dr::AlreadyExists
       ;
     end
