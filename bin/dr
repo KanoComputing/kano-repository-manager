@@ -559,19 +559,9 @@ class RepoCLI < ExtendedThor
       raise "Package #{pkg_name.style "pkg-name"} doesn't exist in the repo"
     end
 
-    response = 'x'
-    while ! ['y', 'n'].include? response
-      print "Are you absolutely sure you want to push package #{pkg_name.style "pkg-name"} to stable-security?"
-      response = STDIN.gets.strip.downcase
-      if response == 'n'
-        log :err, "Didn't confirm releasing to stable-security"
-        raise "Couldn't confirm for releasing to stable-security"
-      elsif response == 'y'
-        log :info, "Received confirmation, will carry on"
-      else
-        print "Not an acceptable answer, please answer y/n\n"
-      end
-    end
+    prompt_msg = "Are you absolutely sure you want to push package #{pkg_name.style "pkg-name"} to stable-security?"
+    negative_msg = "Couldn't confirm for releasing to stable-security"
+    prompt_to_confirm prompt_msg, negative_msg
 
     v = repo.get_subpackage_versions(pkg_name)["testing"].values
     begin
@@ -706,6 +696,25 @@ class RepoCLI < ExtendedThor
                        options["bind"], repo.get_archive_path
     s.start
   end
+
+  private
+  def prompt_to_confirm(prompt_msg, negative_message)
+    response = 'x'
+    while ! ['y', 'n'].include? response
+      print prompt_msg
+      print "[Y/y/N/n]:"
+      response = STDIN.gets.strip.downcase
+      if response == 'n'
+        log :err, "Replied negatively to prompt, aborting..."
+        raise negative_message
+      elsif response == 'y'
+        log :info, "Received confirmation, will carry on"
+      else
+        print "Not an acceptable answer, please answer y/n\n"
+      end
+    end
+  end
+
 end
 
 
