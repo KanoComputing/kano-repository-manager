@@ -241,7 +241,7 @@ class List < ExtendedThor
   end
 
   desc "codenames", "Show the codenames of the configured suites"
-  def suites
+  def codenames
     repo = get_repo_handle
 
     suites = repo.get_suites
