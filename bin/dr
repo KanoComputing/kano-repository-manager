@@ -240,7 +240,7 @@ class List < ExtendedThor
     end
   end
 
-  desc "suites", "Show the codenames of the configured suites"
+  desc "codenames", "Show the codenames of the configured suites"
   def suites
     repo = get_repo_handle
 
