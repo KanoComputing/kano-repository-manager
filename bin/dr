@@ -37,7 +37,11 @@ class ExtendedThor < Thor
 
   def get_repo_handle
     if options.has_key? "repo"
-      Dr::Repo.new options["repo"]
+        if Dr.config.repositories.has_key? options["repo"]
+          Dr::Repo.new Dr.config.repositories[options["repo"]][:location]
+        else
+          Dr::Repo.new options["repo"]
+        end
     else
       if Dr.config.default_repo != nil
         Dr::Repo.new Dr.config.repositories[Dr.config.default_repo][:location]
