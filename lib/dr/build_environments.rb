@@ -90,7 +90,7 @@ module Dr
         :repos => {
           :wheezy => {
             :url => "http://ftp.uk.debian.org/debian/",
-            :key => "https://ftp-master.debian.org/keys/archive-key-8.0.asc",
+            :key => "https://ftp-master.debian.org/keys/archive-key-8.asc",
             :src => true,
             :codename => "jessie",
             :components => "main contrib non-free"
