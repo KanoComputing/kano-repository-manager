@@ -36,6 +36,38 @@ module Dr
         :packages => []
       },
 
+      :kano_jessie => {
+        :name =>"Kano OS (Jessie)",
+        :arches => ["armhf"],
+        :repos => {
+          :raspbian_jessie => {
+            :url => "http://mirror.ox.ac.uk/sites/archive.raspbian.org/archive/raspbian/",
+            :key => "http://mirror.ox.ac.uk/sites/archive.raspbian.org/archive/raspbian.public.key",
+            :src => true,
+            :codename => "jessie",
+            :components => "main contrib non-free rpi"
+          },
+
+          :raspi_foundation_jessie => {
+            :url => "http://dev.kano.me/mirrors/raspberrypi/",
+            :key => "http://dev.kano.me/mirrors/raspberrypi/raspberrypi.gpg.key",
+            :src => false,
+            :codename => "jessie",
+            :components => "main"
+          },
+
+          :kano_jessie => {
+            :url => "http://dev.kano.me/archive-jessie/",
+            :key => "http://dev.kano.me/archive-jessie/repo.gpg.key",
+            :src => false,
+            :codename => "devel",
+            :components => "main"
+          }
+        },
+        :base_repo => :raspbian_jessie,
+        :packages => []
+      },
+
       :wheezy => {
         :name => "Debian Wheezy",
         :arches => ["x86_64"],
@@ -45,6 +77,22 @@ module Dr
             :key => "https://ftp-master.debian.org/keys/archive-key-7.0.asc",
             :src => true,
             :codename => "wheezy",
+            :components => "main contrib non-free"
+          }
+        },
+        :base_repo => :wheezy,
+        :packages => []
+      },
+
+      :jessie => {
+        :name => "Debian Jessie",
+        :arches => ["x86_64"],
+        :repos => {
+          :wheezy => {
+            :url => "http://ftp.uk.debian.org/debian/",
+            :key => "https://ftp-master.debian.org/keys/archive-key-8.asc",
+            :src => true,
+            :codename => "jessie",
             :components => "main contrib non-free"
           }
         },
