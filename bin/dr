@@ -716,6 +716,20 @@ class RepoCLI < ExtendedThor
     end
   end
 
+  desc "backup", "Backup the repository"
+  method_option :dest, :aliases => "-d", :type => :string
+  def backup
+    repo = get_repo_handle
+
+    if options["dest"] == nil 
+      log :err, "Need a destination"
+      raise "Bad arguments"
+    end
+
+    repo.backup(options["dest"])
+    
+  end
+
   desc "serve", "Start the archive server"
   method_option :port, :aliases => "-p", :type => :numeric,
                 :desc => "The port to run the server on", :default => 80
