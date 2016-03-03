@@ -234,11 +234,11 @@ module Dr
 
             # Make orig tarball
             all_files = Dir["#{build_dir}/*"] + Dir["#{build_dir}/.*"]
-            excluded_files = ['.', '..', '.git']
+            excluded_files = ['.', '..', '.git', 'debian']
             selected_files = all_files.select { |path| !excluded_files.include?(File.basename(path)) }
             files = selected_files.map { |f| "\"#{File.basename f}\"" }.join " "
             log :info, "Creating orig source tarball"
-            tar = "tar cz -C #{build_dir} --exclude=debian " +
+            tar = "tar cz -C #{build_dir} " +
                   "-f #{br}/#{@name}_#{version.upstream}.orig.tar.gz " +
                   "#{files}"
             ShellCmd.new tar, :tag => "tar"
