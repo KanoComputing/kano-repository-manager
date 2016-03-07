@@ -163,7 +163,7 @@ class List < ExtendedThor
   desc "builds PKG-NAME", "Show the history of all builds of a package"
   def builds(pkg_name)
     repo = get_repo_handle
-    log :info, "Listing all buils of #{pkg_name.style "pkg-name"}"
+    log :info, "Listing all builds of #{pkg_name.style "pkg-name"}"
 
     suites = repo.get_suites
 
