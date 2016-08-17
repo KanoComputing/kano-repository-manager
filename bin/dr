@@ -585,8 +585,6 @@ class RepoCLI < ExtendedThor
       log :err, "#{"DEPRECATED".fg('red')}, suite required. Doing nothing."
       log :err, "Use '#{"dr release RC-SUITE".fg("yellow")}' instead."
       raise "Running '#{"dr release".fg("yellow")}' command without suite deprecated"
-
-      return
     end
 
     repo = get_repo_handle
@@ -595,24 +593,29 @@ class RepoCLI < ExtendedThor
     if suite.nil?
       log :err, "Suite '#{rc_suite.fg("yellow")}' not found"
       raise "Suite '#{rc_suite.fg("yellow")}' doesn't exist in the repo"
-
-      return
     end
+
+    release_suite = "stable"
+    release_codename = repo.suite_to_codename release_suite
+
+    log :info, "Pushing packages from #{rc_suite.fg("yellow")} to #{release_codename.fg("yellow")}"
+    suite_diff rc_suite, release_codename
+    prompt_to_confirm "Are you sure you want to continue?", "Aborting release"
 
     log :info, "Releasing all packages from testing"
     repo.list_packages(suite).each do |pkg|
       v = repo.get_subpackage_versions(pkg.name)[suite].values
       begin
-        repo.push pkg.name, v.max, "stable", (options["force"] == true)
+        repo.push pkg.name, v.max, release_suite, (options["force"] == true)
       rescue Dr::AlreadyExists
         ;
       end
     end
 
     log :info, "Removing packages that are not in testing any more"
-    repo.list_packages("release").each do |pkg|
+    repo.list_packages(release_codename).each do |pkg|
       if ! repo.suite_has_package? suite, pkg.name
-        repo.unpush pkg.name, "release"
+        repo.unpush pkg.name, release_codename
       end
     end
   end

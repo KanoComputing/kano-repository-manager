@@ -389,6 +389,14 @@ module Dr
       nil
     end
 
+    def suite_to_codename(codename_or_suite)
+      get_suites.each do |suite, codename|
+        return codename if codename_or_suite == suite || codename_or_suite == codename
+      end
+
+      nil
+    end
+
     def is_used?(pkg_name, version=nil)
       versions_by_suite = get_subpackage_versions pkg_name
       versions_by_suite.inject(false) do |rslt, hash_pair|
