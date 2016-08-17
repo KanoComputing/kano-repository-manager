@@ -360,6 +360,32 @@ class RepoCLI < ExtendedThor
       repo_conf[:codenames].push codename
     end
 
+    # TODO: Add CLI command to add suites
+    extra_suite_count = ask "   Additional suites [#{'0'.fg("yellow")}]:"
+    extra_suite_count.to_i.times do |idx|
+      suite_name = nil
+      loop do
+        suite_name = ask "   Suite #{idx + 1} name (#{"required".fg("red")}):"
+        if repo_conf[:suites].include? suite_name
+          log :warn, "Suite already exists, try again".fg("red")
+          next
+        end
+        break unless suite_name.empty?
+      end
+      repo_conf[:suites].push suite_name
+
+      codename = nil
+      loop do
+        codename = ask "   Codename for suite #{idx + 1} (#{"required".fg("red")}):"
+        if repo_conf[:codenames].include? codename
+          log :warn, "Codename already exists, try again".fg("red")
+          next
+        end
+        break unless codename.empty?
+      end
+      repo_conf[:codenames].push codename
+    end
+
     r = Dr::Repo.new location
     r.setup repo_conf
   end
