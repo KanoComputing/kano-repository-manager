@@ -265,7 +265,7 @@ class List < ExtendedThor
       when "stable" then "red"
       when "testing" then "yellow"
       when "unstable" then "green"
-      else nil end
+      else "cyan" end
     return colour
   end
 end
