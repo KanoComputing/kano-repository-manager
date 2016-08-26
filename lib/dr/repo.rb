@@ -66,6 +66,10 @@ module Dr
             f.puts "Codename: #{conf[:codenames][i]}"
           end
 
+          if conf[:default_branches][i].length > 0
+            f.puts "DefaultBranch: #{conf[:default_branches][i]}"
+          end
+
           if conf[:name].length > 0
             f.puts "Origin: #{conf[:name]} - #{s}"
             f.puts "Label: #{conf[:name]} - #{s}"
@@ -151,33 +155,43 @@ module Dr
       end
     end
 
-    def get_suites
+    def get_suites_config
       suites = nil
-      File.open "#{@location}/archive/conf/distributions", "r" do |f|
+      File.open @repo_conf_path, "r" do |f|
         suites = f.read.split "\n\n"
       end
 
       suites.map do |s|
-        suite = nil
-        codename = nil
-        s.each_line do |l|
-          m = l.match /^Suite: (.+)/
-          suite = m.captures[0].chomp if m
+        YAML.load s
+      end
+    end
 
-          m = l.match /^Codename: (.+)/
-          codename = m.captures[0].chomp if m
+    def get_suite_config(suite)
+      suites = get_suites_config
+
+      suites.each do |s|
+        if s["Suite"] == suite || s["Codename"] == suite
+          return s
         end
-        [suite, codename]
+      end
+
+      nil
+    end
+
+    def get_suites
+      suites = get_suites_config
+
+      suites.map do |s|
+        [s["Suite"], s["Codename"]]
       end
     end
 
     def get_architectures
       arches = []
-      File.open "#{@location}/archive/conf/distributions", "r" do |f|
-        f.each_line do |l|
-          m = l.match /^Architectures: (.+)/
-          arches += m.captures[0].chomp.split(" ") if m
-        end
+      suites = get_suites_config
+
+      suites.each do |s|
+        arches += s["Architectures"].chomp.split(" ") if s.has_key? "Architectures"
       end
 
       arches.uniq
@@ -411,7 +425,7 @@ module Dr
 
     private
     def get_key
-      File.open "#{@location}/archive/conf/distributions", "r" do |f|
+      File.open @repo_conf_path, "r" do |f|
         f.each_line do |line|
           m = line.match /^SignWith: (.+)/
           return m.captures[0] if m

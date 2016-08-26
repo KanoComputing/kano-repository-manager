@@ -5,6 +5,7 @@ require "dr/package"
 require "dr/pkgversion"
 require "dr/shellcmd"
 require "dr/utils"
+require "dr/config"
 
 require "yaml"
 require "octokit"
@@ -139,8 +140,8 @@ module Dr
       end
     end
 
-    def build(branch=nil, force=false)
-      branch = @default_branch unless branch
+    def build(branch=nil, force=false, suite=nil)
+      branch = get_default_branch(:suite => suite) unless branch
 
       version = nil
 
@@ -411,6 +412,49 @@ EOS
       end
 
       arches.uniq
+    end
+
+    def get_default_branch(suite = nil, conf = nil)
+      if conf.nil?
+        conf = get_configuration
+      end
+
+      unless suite.nil?
+        if conf.has_key? :suites
+          suites = src_meta[:suites]
+
+          if suites.has_key? suite
+            suite_conf = suites[suite]
+
+            if suite_conf.has_key? :default_branch
+              return suite_conf[:default_branch].to_sym
+            end
+          end
+        end
+      end
+
+      if conf.has_key? :default_branch
+        return conf[:default_branch].to_sym
+      end
+
+      suite_conf = @repo.get_suite_config suite
+      if suite_conf.has_key? :default_branch
+        return suite_conf[:default_branch].to_sym
+      end
+
+      repo_conf = @repo.get_configuration
+      if repo_conf.has_key? :default_branch
+        return repo_conf[:default_branch].to_sym
+      end
+
+      if Dr::config.has_key? :default_branch
+        return Dr::config[:default_branch].to_sym
+      end
+
+      # TODO: Figure out what the default should be
+      @default_branch
+      # get_current_branch
+      # 'master'
     end
 
     def get_current_branch
