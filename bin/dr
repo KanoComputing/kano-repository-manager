@@ -485,15 +485,18 @@ class RepoCLI < ExtendedThor
   end
 
   desc "update [SUITE]", "Update and rebuild (if necessary) all the packages in the suite"
+  method_option :branch, :aliases => "-b", :type => :string,
+                :desc => "Branch to use as the source for update"
   def update(suite="testing")
     log :info, "Updating all packages in the #{suite.fg "blue"} suite"
     repo = get_repo_handle
+    branch = options["branch"] if options.has_key? "branch"
 
     updated = 0
     repo.list_packages(suite).each do |pkg|
       log :info, "Updating #{pkg.name.style "pkg-name"}"
       begin
-        version = pkg.build
+        version = pkg.build :branch => branch
       rescue Dr::Package::UnableToBuild
         log :info, ""
         next
