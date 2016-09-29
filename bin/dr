@@ -265,7 +265,7 @@ class List < ExtendedThor
       when "stable" then "red"
       when "testing" then "yellow"
       when "unstable" then "green"
-      else nil end
+      else "cyan" end
     return colour
   end
 end
@@ -357,6 +357,32 @@ class RepoCLI < ExtendedThor
 
     repo_conf[:suites].each do |s|
       codename = ask "   Codename for '#{s.fg("yellow")}':"
+      repo_conf[:codenames].push codename
+    end
+
+    # TODO: Add CLI command to add suites
+    extra_suite_count = ask "   Additional suites [#{'0'.fg("yellow")}]:"
+    extra_suite_count.to_i.times do |idx|
+      suite_name = nil
+      loop do
+        suite_name = ask "   Suite #{idx + 1} name (#{"required".fg("red")}):"
+        if repo_conf[:suites].include? suite_name
+          log :warn, "Suite already exists, try again".fg("red")
+          next
+        end
+        break unless suite_name.empty?
+      end
+      repo_conf[:suites].push suite_name
+
+      codename = nil
+      loop do
+        codename = ask "   Codename for suite #{idx + 1} (#{"required".fg("red")}):"
+        if repo_conf[:codenames].include? codename
+          log :warn, "Codename already exists, try again".fg("red")
+          next
+        end
+        break unless codename.empty?
+      end
       repo_conf[:codenames].push codename
     end
 
@@ -551,26 +577,45 @@ class RepoCLI < ExtendedThor
   end
 
 
-  desc "release", "Push all the packages from testing to release"
+  desc "release RC-SUITE [DEST-SUITE]", "Push all the packages from RC-SUITE to DEST-SUITE (to release by default)"
   method_option :force, :aliases => "-f", :type => :boolean,
                 :desc => "Force-push all released packages"
-  def release
+  def release(rc_suite=nil, dest_suite="release")
+    if rc_suite.nil?
+      log :err, "#{"DEPRECATED".fg('red')}, suite required. Doing nothing."
+      log :err, "Use '#{"dr release RC-SUITE".fg("yellow")}' instead."
+      raise "Running '#{"dr release".fg("yellow")}' command without suite deprecated"
+    end
+
     repo = get_repo_handle
+    suite = repo.codename_to_suite rc_suite
+
+    if suite.nil?
+      log :err, "Suite '#{rc_suite.fg("yellow")}' not found"
+      raise "Suite '#{rc_suite.fg("yellow")}' doesn't exist in the repo"
+    end
+
+    release_codename = dest_suite
+    release_suite = repo.codename_to_suite release_codename
+
+    log :info, "Pushing packages from #{rc_suite.fg("yellow")} to #{release_codename.fg("yellow")}"
+    suite_diff rc_suite, release_codename
+    prompt_to_confirm "Are you sure you want to continue?", "Aborting release"
 
     log :info, "Releasing all packages from testing"
-    repo.list_packages("testing").each do |pkg|
-      v = repo.get_subpackage_versions(pkg.name)["testing"].values
+    repo.list_packages(suite).each do |pkg|
+      v = repo.get_subpackage_versions(pkg.name)[suite].values
       begin
-        repo.push pkg.name, v.max, "stable", (options["force"] == true)
+        repo.push pkg.name, v.max, release_suite, (options["force"] == true)
       rescue Dr::AlreadyExists
         ;
       end
     end
 
-    log :info, "Removing packages that are not in testing any more"
-    repo.list_packages("release").each do |pkg|
-      if ! repo.suite_has_package? "testing", pkg.name
-        repo.unpush pkg.name, "release"
+    log :info, "Removing packages that are not in {#rc_suite} any more"
+    repo.list_packages(release_codename).each do |pkg|
+      if ! repo.suite_has_package? suite, pkg.name
+        repo.unpush pkg.name, release_codename
       end
     end
   end
