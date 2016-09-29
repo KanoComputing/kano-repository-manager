@@ -577,10 +577,10 @@ class RepoCLI < ExtendedThor
   end
 
 
-  desc "release RC-SUITE", "Push all the packages from testing to release"
+  desc "release RC-SUITE [DEST-SUITE]", "Push all the packages from testing to release"
   method_option :force, :aliases => "-f", :type => :boolean,
                 :desc => "Force-push all released packages"
-  def release(rc_suite=nil)
+  def release(rc_suite=nil, dest_suite="release")
     if rc_suite.nil?
       log :err, "#{"DEPRECATED".fg('red')}, suite required. Doing nothing."
       log :err, "Use '#{"dr release RC-SUITE".fg("yellow")}' instead."
@@ -595,8 +595,8 @@ class RepoCLI < ExtendedThor
       raise "Suite '#{rc_suite.fg("yellow")}' doesn't exist in the repo"
     end
 
-    release_suite = "stable"
-    release_codename = repo.suite_to_codename release_suite
+    release_codename = dest_suite
+    release_suite = repo.codename_to_suite release_codename
 
     log :info, "Pushing packages from #{rc_suite.fg("yellow")} to #{release_codename.fg("yellow")}"
     suite_diff rc_suite, release_codename
@@ -612,7 +612,7 @@ class RepoCLI < ExtendedThor
       end
     end
 
-    log :info, "Removing packages that are not in testing any more"
+    log :info, "Removing packages that are not in {#rc_suite} any more"
     repo.list_packages(release_codename).each do |pkg|
       if ! repo.suite_has_package? suite, pkg.name
         repo.unpush pkg.name, release_codename
