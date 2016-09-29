@@ -577,7 +577,7 @@ class RepoCLI < ExtendedThor
   end
 
 
-  desc "release RC-SUITE [DEST-SUITE]", "Push all the packages from testing to release"
+  desc "release RC-SUITE [DEST-SUITE]", "Push all the packages from RC-SUITE to DEST-SUITE (to release by default)"
   method_option :force, :aliases => "-f", :type => :boolean,
                 :desc => "Force-push all released packages"
   def release(rc_suite=nil, dest_suite="release")
