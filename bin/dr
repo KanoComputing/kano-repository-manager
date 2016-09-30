@@ -612,7 +612,7 @@ class RepoCLI < ExtendedThor
       end
     end
 
-    log :info, "Removing packages that are not in {#rc_suite} any more"
+    log :info, "Removing packages that are not in #{rc_suite} any more"
     repo.list_packages(release_codename).each do |pkg|
       if ! repo.suite_has_package? suite, pkg.name
         repo.unpush pkg.name, release_codename
