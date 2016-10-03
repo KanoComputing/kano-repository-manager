@@ -21,6 +21,9 @@ module Dr
     include Logger
 
     attr_reader :location
+    attr_reader :packages_dir
+    attr_reader :repo_metadata_path
+    attr_reader :pkg_build_meta_template
 
     def get_archive_path
       "#{@location}/archive"
@@ -30,6 +33,12 @@ module Dr
       @location = File.expand_path loc
 
       @packages_dir = "#{@location}/packages"
+
+      @repo_archive_dir = "#{@location}/archive"
+      @repo_conf_dir = "#{@repo_archive_dir}/conf"
+      @repo_conf_path = "#{@repo_conf_dir}/distributions"
+      @repo_metadata_path = "#{@location}/metadata"
+      @pkg_build_meta_template = "#{@packages_dir}/%{pkg_name}/builds/%{version}/.metadata"
     end
 
     def setup(conf)
@@ -41,20 +50,24 @@ module Dr
         raise e
       end
 
-      FileUtils.mkdir_p "#{@location}/archive"
+      FileUtils.mkdir_p @repo_archive_dir
 
       gpg = GnuPG.new "#{@location}/gnupg-keyring"
       key = gpg.generate_key conf[:gpg_name], conf[:gpg_mail], conf[:gpg_pass]
-      gpg.export_pub key, "#{@location}/archive/repo.gpg.key"
+      gpg.export_pub key, "#{@repo_archive_dir}/repo.gpg.key"
 
       log :info, "Writing the configuration file"
-      FileUtils.mkdir_p "#{@location}/archive/conf"
-      File.open "#{@location}/archive/conf/distributions", "w" do |f|
+      FileUtils.mkdir_p @repo_conf_dir
+      File.open @repo_conf_path, "w" do |f|
         conf[:suites].each_with_index do |s, i|
           f.puts "Suite: #{s}"
 
           if conf[:codenames][i].length > 0
             f.puts "Codename: #{conf[:codenames][i]}"
+          end
+
+          if conf[:default_branches][i].length > 0
+            f.puts "DefaultBranch: #{conf[:default_branches][i]}"
           end
 
           if conf[:name].length > 0
@@ -80,15 +93,14 @@ module Dr
       metadata = {
         "default_build_environment" => conf[:build_environment].to_s
       }
-      File.open("#{@location}/metadata", "w" ) do |out|
+      File.open(@repo_metadata_path, "w" ) do |out|
         out.write metadata.to_yaml
       end
     end
 
     def get_configuration
-        meta_file = "#{@location}/metadata"
-        if File.exists? meta_file
-          Utils::symbolise_keys YAML.load_file(meta_file)
+        if File.exists? @repo_metadata_path
+          Utils::symbolise_keys YAML.load_file(@repo_metadata_path)
         else
           {}
         end
@@ -96,7 +108,7 @@ module Dr
 
     def set_configuration(new_metadata)
       # TODO: Some validation needed
-      File.open("#{@location}/metadata", "w" ) do |out|
+      File.open(@repo_metadata_path, "w" ) do |out|
         out.write Utils::stringify_symbols(new_metadata).to_yaml
       end
     end
@@ -143,33 +155,43 @@ module Dr
       end
     end
 
-    def get_suites
+    def get_suites_config
       suites = nil
-      File.open "#{@location}/archive/conf/distributions", "r" do |f|
+      File.open @repo_conf_path, "r" do |f|
         suites = f.read.split "\n\n"
       end
 
       suites.map do |s|
-        suite = nil
-        codename = nil
-        s.each_line do |l|
-          m = l.match /^Suite: (.+)/
-          suite = m.captures[0].chomp if m
+        YAML.load s
+      end
+    end
 
-          m = l.match /^Codename: (.+)/
-          codename = m.captures[0].chomp if m
+    def get_suite_config(suite)
+      suites = get_suites_config
+
+      suites.each do |s|
+        if s["Suite"] == suite || s["Codename"] == suite
+          return s
         end
-        [suite, codename]
+      end
+
+      nil
+    end
+
+    def get_suites
+      suites = get_suites_config
+
+      suites.map do |s|
+        [s["Suite"], s["Codename"]]
       end
     end
 
     def get_architectures
       arches = []
-      File.open "#{@location}/archive/conf/distributions", "r" do |f|
-        f.each_line do |l|
-          m = l.match /^Architectures: (.+)/
-          arches += m.captures[0].chomp.split(" ") if m
-        end
+      suites = get_suites_config
+
+      suites.each do |s|
+        arches += s["Architectures"].chomp.split(" ") if s.has_key? "Architectures"
       end
 
       arches.uniq
@@ -364,7 +386,7 @@ module Dr
       pkg = get_package pkg_name
       raise "Build #{version} doesn't exist" unless pkg.build_exists? version
 
-      md_file = "#{@location}/packages/#{pkg.name}/builds/#{version}/.metadata"
+      md_file = @pkg_build_meta_template % {pkg_name: pkg.name, version: version}
       if File.exists? md_file
         YAML.load_file md_file
       else
@@ -411,7 +433,7 @@ module Dr
 
     private
     def get_key
-      File.open "#{@location}/archive/conf/distributions", "r" do |f|
+      File.open @repo_conf_path, "r" do |f|
         f.each_line do |line|
           m = line.match /^SignWith: (.+)/
           return m.captures[0] if m

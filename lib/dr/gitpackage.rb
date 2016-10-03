@@ -5,6 +5,7 @@ require "dr/package"
 require "dr/pkgversion"
 require "dr/shellcmd"
 require "dr/utils"
+require "dr/config"
 
 require "yaml"
 require "octokit"
@@ -67,7 +68,10 @@ module Dr
     def initialize(name, repo)
       super name, repo
 
-      @git_dir = "#{repo.location}/packages/#{name}/source"
+      @pkg_dir = "#{repo.packages_dir}/#{name}"
+      @git_dir = "#{pkg_dir}/source"
+      @pkg_metadata_path = "#{@pkg_dir}/metadata"
+
       @default_branch = get_current_branch
     end
 
@@ -122,9 +126,8 @@ module Dr
     end
 
     def get_configuration
-      md_file = "#{@repo.location}/packages/#{@name}/metadata"
-      if File.exists? md_file
-        Utils::symbolise_keys YAML.load_file md_file
+      if File.exists? @pkg_metadata_path
+        Utils::symbolise_keys YAML.load_file @pkg_metadata_path
       else
         {}
       end
@@ -132,14 +135,13 @@ module Dr
 
     def set_configuration(config)
       # TODO: Some validation needed
-      md_file = "#{@repo.location}/packages/#{@name}/metadata"
-      File.open(md_file, "w") do |f|
+      File.open(@pkg_metadata_path, "w") do |f|
         YAML.dump Utils::stringify_symbols(config), f
       end
     end
 
-    def build(branch=nil, force=false)
-      branch = @default_branch unless branch
+    def build(branch=nil, force=false, suite=nil)
+      branch = get_default_branch(:suite => suite) unless branch
 
       version = nil
 
@@ -410,6 +412,49 @@ EOS
       end
 
       arches.uniq
+    end
+
+    def get_default_branch(suite = nil, conf = nil)
+      if conf.nil?
+        conf = get_configuration
+      end
+
+      unless suite.nil?
+        if conf.has_key? :suites
+          suites = src_meta[:suites]
+
+          if suites.has_key? suite
+            suite_conf = suites[suite]
+
+            if suite_conf.has_key? :default_branch
+              return suite_conf[:default_branch].to_sym
+            end
+          end
+        end
+      end
+
+      if conf.has_key? :default_branch
+        return conf[:default_branch].to_sym
+      end
+
+      suite_conf = @repo.get_suite_config suite
+      if suite_conf.has_key? :default_branch
+        return suite_conf[:default_branch].to_sym
+      end
+
+      repo_conf = @repo.get_configuration
+      if repo_conf.has_key? :default_branch
+        return repo_conf[:default_branch].to_sym
+      end
+
+      if Dr::config.has_key? :default_branch
+        return Dr::config[:default_branch].to_sym
+      end
+
+      # TODO: Figure out what the default should be
+      @default_branch
+      # get_current_branch
+      # 'master'
     end
 
     def get_current_branch

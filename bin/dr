@@ -288,7 +288,8 @@ class RepoCLI < ExtendedThor
       :components => ["main"],
       :suites => ["stable-security", "stable", "testing", "unstable"],
       :build_environment => :kano,
-      :codenames => []
+      :codenames => [],
+      :default_branches => []
     }
 
     name = ask "   Repository name "<< "[#{repo_conf[:name].fg("yellow")}]:"
@@ -358,6 +359,8 @@ class RepoCLI < ExtendedThor
     repo_conf[:suites].each do |s|
       codename = ask "   Codename for '#{s.fg("yellow")}':"
       repo_conf[:codenames].push codename
+      default_branch = ask "   Default branch for '#{s.fg("yellow")}':"
+      repo_conf[:default_branches].push default_branch
     end
 
     # TODO: Add CLI command to add suites
@@ -519,7 +522,7 @@ class RepoCLI < ExtendedThor
     repo.list_packages(suite).each do |pkg|
       log :info, "Updating #{pkg.name.style "pkg-name"}"
       begin
-        version = pkg.build
+        version = pkg.build :suite => suite
       rescue Dr::Package::UnableToBuild
         log :info, ""
         next
