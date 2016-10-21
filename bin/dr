@@ -522,7 +522,7 @@ class RepoCLI < ExtendedThor
     repo.list_packages(suite).each do |pkg|
       log :info, "Updating #{pkg.name.style "pkg-name"}"
       begin
-        version = pkg.build :branch => branch
+        version = pkg.build branch
       rescue Dr::Package::UnableToBuild
         log :info, ""
         next
