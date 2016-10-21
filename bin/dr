@@ -653,6 +653,8 @@ class RepoCLI < ExtendedThor
   end
 
   desc "suite-diff SUITE OTHER-SUITE", "Show the differences between packages in two suites"
+  method_option :deb, :aliases => "-d", :type => :boolean,
+                :desc => "Check only deb packages"
   def suite_diff(first, second)
     repo = get_repo_handle
 
@@ -669,8 +671,16 @@ class RepoCLI < ExtendedThor
     end
 
     log :info, "Showing the differences between #{first.fg 'green'} and #{second.fg 'red'}"
+    if options["deb"]
+      log :info, "Only for Deb packages"
+    end
+
     repo.list_packages(first).each do |pkg|
       first_v = repo.get_subpackage_versions(pkg.name)[first].values.max
+
+      if options["deb"] and not pkg.is_a? Dr::DebPackage
+         next
+      end
 
       if !repo.suite_has_package? second, pkg.name
         log :info, "#{pkg.name.fg 'orange'} is in #{first.fg 'green'} but not in #{second.fg 'red'}"
