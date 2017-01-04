@@ -28,6 +28,13 @@ describe Dr do
 
         expect(one > two).to be true
       end
+
+      it "works when comparing single digit to double digit versions" do
+        one = Dr::PkgVersion.new('2.10-0.20161116')
+        two = Dr::PkgVersion.new('2.9-0.20160603')
+
+        expect(one > two).to be true
+      end
     end
 
     describe "compare based on upstram version" do
