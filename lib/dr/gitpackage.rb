@@ -251,12 +251,29 @@ mk-build-deps *.dsc -i -t "apt-get --no-install-recommends -y"
 rm -rf #{@name}-build-deps_*
 EOF
 EOS
+
+# native build
+#            build = <<-EOS
+#sudo chroot #{br} <<EOF
+#cd /#{build_dir_name}
+#debuild -i -uc -us -b
+#EOF
+#EOS
+
+#
+# cross build
+# Create symbolic link to qmake sysroot
+# change ownsership of source packages in the root-owned sysroot
+# invoke debuild on the host system
+#
           build = <<-EOS
-sudo chroot #{br} <<EOF
-cd /#{build_dir_name}
-debuild -i -uc -us -b
-EOF
+ln -sfv /#{br} /tmp/pipaos-devel
+ls -l /tmp/pipaos-devel/
+cd /#{br}/#{build_dir_name}
+myname=$(id -u); mygroup=$(id -g) ; sudo chown $myname:$mygroup /#{br}/*
+debuild --preserve-envvar PATH -us -uc -d
 EOS
+
 
             log :info, "Updating the sources lists"
             ShellCmd.new apt, :tag => "apt-get", :show_out => true
