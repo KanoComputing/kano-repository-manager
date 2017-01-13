@@ -260,20 +260,22 @@ EOS
 #EOF
 #EOS
 
-#
 # cross build
-# Create symbolic link to qmake sysroot
-# change ownsership of source packages in the root-owned sysroot
-# invoke debuild on the host system
-#
-          build = <<-EOS
+# TODO: reuse the sysroot environment variable (/usr/local/qt5/bin-x86-64/qt.conf)
+# TODO: need to install pkg-config on the host
+# TODO: fix objcopy to call the cross-compiler aware version
+
+            build = <<-EOS
 ln -sfv /#{br} /tmp/pipaos-devel
 ls -l /tmp/pipaos-devel/
 cd /#{br}/#{build_dir_name}
 myname=$(id -u); mygroup=$(id -g) ; sudo chown $myname:$mygroup /#{br}/*
-debuild --preserve-envvar PATH -us -uc -d
+export PKG_CONFIG_SYSROOT_DIR="/tmp/pipaos-devel"
+export PKG_CONFIG_PATH="${PKG_CONFIG_SYSROOT_DIR}/usr/lib/arm-linux-gnueabihf/pkgconfig/"
+debuild --preserve-envvar PATH --preserve-envvar=PKG_CONFIG_PATH --preserve-envvar=PKG_CONFIG_SYSROOT_DIR -us -uc -d
 EOS
 
+            log :info, "Chroot is at: #{br} build is #{build_dir_name}"
 
             log :info, "Updating the sources lists"
             ShellCmd.new apt, :tag => "apt-get", :show_out => true
