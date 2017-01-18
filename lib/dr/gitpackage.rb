@@ -253,30 +253,41 @@ EOF
 EOS
 
 # native build
-#            build = <<-EOS
-#sudo chroot #{br} <<EOF
-#cd /#{build_dir_name}
-#debuild -i -uc -us -b
-#EOF
-#EOS
+            build_native = <<-EOS
+sudo chroot #{br} <<EOF
+cd /#{build_dir_name}
+debuild -i -uc -us -b
+EOF
+EOS
 
-# cross build
-# TODO: reuse the sysroot environment variable (/usr/local/qt5/bin-x86-64/qt.conf)
 # TODO: need to install pkg-config on the host
-# TODO: fix objcopy to call the cross-compiler aware version
+# cross build
 
-            build = <<-EOS
+            build_cross = <<-EOS
 ln -sfv /#{br} /tmp/pipaos-devel
 ls -l /tmp/pipaos-devel/
 cd /#{br}/#{build_dir_name}
 myname=$(id -u); mygroup=$(id -g) ; sudo chown $myname:$mygroup /#{br}/*
+
+#export LD_LIBRARY_PATH="/tmp/pipaos-devel/lib/arm-linux-gnueabihf:/tmp/pipaos-devel/usr/lib/arm-linux-gnueabihf"
+export CC=/opt/rpi-tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian-x64/bin/arm-linux-gnueabihf-gcc
+export CXX=/opt/rpi-tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian-x64/bin/arm-linux-gnueabihf-g++
+export CFLAGS="--sysroot /tmp/pipaos-devel"
+export LDFLAGS="--sysroot /tmp/pipaos-devel"
+
+# /tmp/pipaos-devel -Wl,-rpath-link,/tmp/pipaos-devel/usr/lib -Wl,-rpath-link,/tmp/pipaos-devel/lib/arm-linux-gnueabihf -Wl,-rpath-link,/tmp/pipaos-devel/usr/lib/arm-linux-gnueabihf"
+
 export PKG_CONFIG_SYSROOT_DIR="/tmp/pipaos-devel"
 export PKG_CONFIG_PATH="${PKG_CONFIG_SYSROOT_DIR}/usr/lib/arm-linux-gnueabihf/pkgconfig/"
-debuild --preserve-envvar PATH --preserve-envvar=PKG_CONFIG_PATH --preserve-envvar=PKG_CONFIG_SYSROOT_DIR -us -uc -d
+
+debuild --preserve-envvar PATH --preserve-envvar=PKG_CONFIG_PATH --preserve-envvar=PKG_CONFIG_SYSROOT_DIR --preserve-envvar=CC --preserve-envvar=CXX --preserve-envvar=CFLAGS --preserve-envvar=LDFLAGS -us -uc -d -aarmhf
+
 EOS
 
-            log :info, "Chroot is at: #{br} build is #{build_dir_name}"
 
+            
+            log :info, "Chroot is at: #{br} build is #{build_dir_name}"
+          
             log :info, "Updating the sources lists"
             ShellCmd.new apt, :tag => "apt-get", :show_out => true
 
@@ -284,7 +295,7 @@ EOS
             ShellCmd.new deps, :tag => "mk-build-deps", :show_out => true
 
             log :info, "Building the package"
-            ShellCmd.new build, :tag => "debuild", :show_out => true
+            ShellCmd.new build_cross, :tag => "debuild", :show_out => true
 
             debs = Dir["#{br}/*.deb"]
             expected_pkgs = get_subpackage_names "#{src_dir}/debian/control"
