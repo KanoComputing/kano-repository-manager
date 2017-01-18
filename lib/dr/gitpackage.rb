@@ -351,6 +351,13 @@ EOS
       end
     end
 
+    def get_repo_name()
+        url = get_repo_url
+        b = File.basename(url)
+        b.slice!(".git")
+        return b
+    end
+
     private
     def update_from_origin(branch)
       log :info, "Pulling changes from origin"
