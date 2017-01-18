@@ -154,6 +154,30 @@ class List < ExtendedThor
     end
   end
 
+  desc "gitrepos SUITE", "Show a list of git repo names for source packages"
+  def gitrepos(suite)
+    repo = get_repo_handle
+
+    suites = repo.get_suites
+    exists = suites.inject(false) { |r, s| r || s.include?(suite) }
+    raise "Suite '#{suite}' doesn't exist" unless exists
+
+    log :info, "Listing all git repos used by #{suite.fg "blue"}"
+
+    suite = repo.codename_to_suite suite
+    suite_packages = repo.list_packages
+    suite_packages.each do |pkg|
+      if pkg.is_a? Dr::GitPackage
+        versions = repo.get_subpackage_versions pkg.name
+        reponame = pkg.get_repo_name
+        if not versions[suite].empty?
+          log :info, "  #{reponame.fg "orange"}"
+        end
+      end
+    end
+  end
+
+
   desc "versions PKG-NAME", "DEPRECATED, please use builds instead"
   def versions(pkg_name)
     log :warn, "This subcommand is deprecated, please use builds instead"
