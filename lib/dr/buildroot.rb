@@ -41,11 +41,21 @@ module Dr
           log :info, "Mounting the /proc file system"
           mnt_cmd = "sudo chroot #{tmp} mount -t proc none /proc"
           ShellCmd.new mnt_cmd, :tag => "mount"
+
+          log :info, "Mounting /dev/urandom"
+          touch_cmd = "sudo touch #{tmp}/dev/urandom"
+          ShellCmd.new touch_cmd, :tag => "touch"
+          mnt2_cmd = "sudo mount --bind /dev/urandom #{tmp}/dev/urandom"
+          ShellCmd.new mnt2_cmd, :tag => "mount2"
           yield tmp
         ensure
           log :info, "Unmounting the /proc file system"
           umnt_cmd = "sudo chroot #{tmp} umount -f /proc"
           ShellCmd.new umnt_cmd, :tag => "umount"
+
+          log :info, "Unmounting the /dev/urandom "
+          umnt2_cmd = "sudo chroot #{tmp} umount -f /dev/urandom"
+          ShellCmd.new umnt2_cmd, :tag => "umount"
 
           log :info, "Cleaning up the buildroot"
           ShellCmd.new "sudo rm -rf #{tmp}/*", :tag => "rm"
