@@ -122,6 +122,13 @@ module Dr
       pkgs.sort
     end
 
+    def has_arch(arch,  build_env=:default)
+      if build_env == :default
+        build_env = get_configuration[:default_build_environment].to_sym
+      end
+      arch == 'all' or Dr.config.build_environments[build_env][:arches].include? arch
+    end
+
     def buildroot(arch, build_env=:default)
       if build_env == :default
         build_env = get_configuration[:default_build_environment].to_sym
