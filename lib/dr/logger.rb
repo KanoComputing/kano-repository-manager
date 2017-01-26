@@ -96,10 +96,10 @@ module Dr
     end
 
     def self.set_verbosity(level)
-      msg = "Message verbosity level not recognised (#{})."
-      raise msg unless @@logger_verbosity_levels.has_key? level.to_sym
-
-      @@verbosity = level.to_sym
+      # FIXME: to_sym crashes with nil after upgrading some gem
+      #msg = "Message verbosity level not recognised (#{})."
+      #raise msg unless @@logger_verbosity_levels.has_key? level
+      #@@verbosity = level.to_sym
     end
 
     def self.log(msg_type, msg, verbosity=nil)
