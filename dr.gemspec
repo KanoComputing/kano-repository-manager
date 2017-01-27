@@ -25,7 +25,7 @@ Gem::Specification.new do |spec|
   spec.test_files    = spec.files.grep(%r{^(test|spec|features)/})
   spec.require_paths = ["lib"]
 
-  spec.add_dependency "thor", "~> 0.18"
+  spec.add_dependency "thor", "~> 0.18", "< 0.19.2"
   spec.add_dependency "tco", "~> 0.1"
   spec.add_dependency "octokit", "~> 3.3"
   spec.add_dependency "rack", "~> 1.6", ">= 1.6.4"
