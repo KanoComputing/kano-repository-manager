@@ -9,8 +9,8 @@ module Dr
         :arches => ["armhf"],
         :repos => {
           :raspbian => {
-            :url => "http://mirror.ox.ac.uk/sites/archive.raspbian.org/archive/raspbian/",
-            :key => "http://mirror.ox.ac.uk/sites/archive.raspbian.org/archive/raspbian.public.key",
+            :url => "http://www.mirrorservice.org/sites/archive.raspbian.org/raspbian/",
+            :key => "http://www.mirrorservice.org/sites/archive.raspbian.org/raspbian.public.key",
             :src => true,
             :codename => "wheezy",
             :components => "main contrib non-free rpi"
@@ -41,8 +41,8 @@ module Dr
         :arches => ["armhf"],
         :repos => {
           :raspbian_jessie => {
-            :url => "http://mirror.ox.ac.uk/sites/archive.raspbian.org/archive/raspbian/",
-            :key => "http://mirror.ox.ac.uk/sites/archive.raspbian.org/archive/raspbian.public.key",
+            :url => "http://www.mirrorservice.org/sites/archive.raspbian.org/raspbian/",
+            :key => "http://www.mirrorservice.org/sites/archive.raspbian.org/raspbian.public.key",
             :src => true,
             :codename => "jessie",
             :components => "main contrib non-free rpi"
