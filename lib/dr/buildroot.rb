@@ -36,6 +36,7 @@ module Dr
     def open
       Dir.mktmpdir do |tmp|
         log :info, "Preparing #{@env.to_s.fg "blue"} #{@arch.fg "orange"} build root"
+        log :info, "Sysroot #{@location}"
         ShellCmd.new "sudo tar xz -C #{tmp} -f #{@location}", :tag => "tar"
         begin
           log :info, "Mounting the /proc file system"
