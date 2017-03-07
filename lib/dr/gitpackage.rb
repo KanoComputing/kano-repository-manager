@@ -368,6 +368,12 @@ EOS
         return b
     end
 
+    def get_repo_url
+      git_cmd = "git --git-dir #{@git_dir} config --get remote.origin.url"
+      git = ShellCmd.new git_cmd, :tag => "git"
+      git.out.strip
+    end
+
     private
     def update_from_origin(branch)
       log :info, "Pulling changes from origin"
@@ -385,12 +391,6 @@ EOS
       current_rev = get_rev branch
 
       [original_rev, current_rev]
-    end
-
-    def get_repo_url
-      git_cmd = "git --git-dir #{@git_dir} config --get remote.origin.url"
-      git = ShellCmd.new git_cmd, :tag => "git"
-      git.out.strip
     end
 
     def get_version(changelog_file)
