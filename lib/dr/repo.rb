@@ -369,7 +369,7 @@ module Dr
 
     def get_build_metadata(pkg_name, version)
       pkg = get_package pkg_name
-      raise "Build #{version} doesn't exist" unless pkg.build_exists? version
+      raise "Build #{version} for package #{pkg_name} doesn't exist" unless pkg.build_exists? version
 
       md_file = "#{@location}/packages/#{pkg.name}/builds/#{version}/.metadata"
       if File.exists? md_file

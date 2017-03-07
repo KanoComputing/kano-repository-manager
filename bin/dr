@@ -603,6 +603,37 @@ class RepoCLI < ExtendedThor
     end
   end
 
+  desc "git-print-hashes", "Print the hashes for each repo in release"
+  method_option :package, :aliases => "-p", :type => :string,
+                :desc => "Only hash a single package"
+  def git_print_hashes()
+    repo = get_repo_handle
+
+    packages = if options["package"] == nil
+      repo.list_packages "stable"
+    else
+      if repo.get_subpackage_versions(options["package"])["stable"].empty?
+        log :warn, "This package isn't in the #{"stable".fg "green"} branch, skipping."
+      end
+
+      [repo.get_package(options["package"])]
+    end
+
+    packages.each do |pkg|
+      if pkg.is_a? Dr::GitPackage
+        version = repo.get_subpackage_versions(pkg.name)["stable"].values.max
+        if pkg.build_exists? version
+          bm = repo.get_build_metadata pkg.name, version
+          log :info, "#{pkg.get_repo_url} #{bm["revision"]}"
+        else
+          log :err, "#{pkg.get_repo_url} missing build version #{version}"
+        end
+      else
+        log :info, "#{pkg.name.style "pkg-name"} is not associated with a git repo, skipping"
+      end
+    end
+  end
+
 
   desc "release RC-SUITE [DEST-SUITE]", "Push all the packages from RC-SUITE to DEST-SUITE (to release by default)"
   method_option :force, :aliases => "-f", :type => :boolean,
