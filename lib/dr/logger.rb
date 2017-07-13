@@ -1,7 +1,8 @@
-# Copyright (C) 2014 Kano Computing Ltd.
+# Copyright (C) 2014-2017 Kano Computing Ltd.
 # License: http://www.gnu.org/licenses/gpl-2.0.txt GNU General Public License v2
 
 require "tco"
+require "thread"
 
 tco_conf = Tco::config
 
@@ -89,6 +90,7 @@ module Dr
       :verbose => 3
     }
 
+    @@stdout_mutex = Mutex.new
     @@log_file = nil
 
     def self.set_logfile(file)
@@ -122,12 +124,15 @@ module Dr
 
       if verbosity <= @@verbosity
         out << " " << msg.chomp
-        puts out
-        STDOUT.flush
 
-        unless @@log_file.nil?
-           @@log_file.puts strip_colours out
-           @@log_file.flush
+        @@stdout_mutex.synchronize do
+          puts out
+          STDOUT.flush
+
+          unless @@log_file.nil?
+            @@log_file.puts strip_colours out
+            @@log_file.flush
+          end
         end
       end
     end

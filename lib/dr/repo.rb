@@ -1,4 +1,4 @@
-# Copyright (C) 2014 Kano Computing Ltd.
+# Copyright (C) 2014-2017 Kano Computing Ltd.
 # License: http://www.gnu.org/licenses/gpl-2.0.txt GNU General Public License v2
 
 require "dr/gitpackage"
@@ -10,6 +10,7 @@ require "dr/gnupg"
 require "dr/buildroot"
 require "dr/utils"
 require "dr/pkgversion"
+require "dr/threadpool"
 
 require "fileutils"
 require "yaml"
@@ -105,11 +106,16 @@ module Dr
       pkgs = []
 
       if suite
-        Dir.foreach @packages_dir do |pkg_name|
+        mutex = Mutex.new
+
+        thread_pool(Dir.entries @packages_dir) do |pkg_name|
           unless pkg_name =~ /^\./
             versions = get_subpackage_versions pkg_name
             unless versions[codename_to_suite suite].empty?
-              pkgs.push get_package pkg_name
+              pkg = get_package pkg_name
+              mutex.synchronize do
+                pkgs.push pkg
+              end
             end
           end
         end
@@ -222,7 +228,14 @@ module Dr
                      "listfilter #{suite} 'Source (== #{pkg_name}) | " +
                      "Package (== #{pkg_name})' " +
                      "2>/dev/null"
-        reprepro = ShellCmd.new reprepro_cmd, :tag => "reprepro"
+        # When running multiple times in threads, the command can fail so allow
+        # it to retry
+        begin
+          tries ||= 0
+          reprepro = ShellCmd.new reprepro_cmd, :tag => "reprepro"
+        rescue
+          retry if (tries += 1) < 3
+        end
         reprepro.out.chomp.each_line do |line|
           subpkg, version = line.split(" ").map(&:chomp)
           versions[suite][subpkg] = version

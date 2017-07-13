@@ -18,6 +18,7 @@ require "dr/shellcmd"
 require "dr/logger"
 require "dr/config"
 require "dr/server"
+require "dr/threadpool"
 
 
 class ExtendedThor < Thor
@@ -730,25 +731,26 @@ class RepoCLI < ExtendedThor
       log :info, "Only for Deb packages"
     end
 
-    repo.list_packages(first).each do |pkg|
-      first_v = repo.get_subpackage_versions(pkg.name)[first].values.max
-
+    thread_pool repo.list_packages(first) do |pkg|
       if options["deb"] and not pkg.is_a? Dr::DebPackage
          next
       end
 
+      subpackage_versions = repo.get_subpackage_versions pkg.name
+
+      first_v = subpackage_versions[first].values.max
       if !repo.suite_has_package? second, pkg.name
         log :info, "#{pkg.name.fg 'orange'} is in #{first.fg 'green'} but not in #{second.fg 'red'}"
         next
       end
 
-      second_v = repo.get_subpackage_versions(pkg.name)[second].values.max
+      second_v = subpackage_versions[second].values.max
       if Dr::PkgVersion.new(first_v) != Dr::PkgVersion.new(second_v)
         log :info, "#{pkg.name.fg 'orange'} #{first_v.fg 'green'} != #{second_v.fg 'red'}"
       end
     end
 
-    repo.list_packages(second).each do |pkg|
+    thread_pool repo.list_packages(second) do |pkg|
       if !repo.suite_has_package? first, pkg.name
         log :info, "#{pkg.name.fg 'orange'} is in #{second.fg 'red'} but not in #{first.fg 'green'}"
       end
