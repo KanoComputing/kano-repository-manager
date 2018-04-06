@@ -36,6 +36,38 @@ module Dr
         :packages => []
       },
 
+      :kano_stretch => {
+        :name =>"Kano OS (Stretch)",
+        :arches => ["armhf"],
+        :repos => {
+          :raspbian_stretch => {
+            :url => "http://www.mirrorservice.org/sites/archive.raspbian.org/raspbian/",
+            :key => "http://www.mirrorservice.org/sites/archive.raspbian.org/raspbian.public.key",
+            :src => true,
+            :codename => "stretch",
+            :components => "main contrib non-free rpi"
+          },
+
+          :raspi_foundation_stretch => {
+            :url => "http://dev.kano.me/mirrors/raspberrypi/",
+            :key => "http://dev.kano.me/mirrors/raspberrypi/raspberrypi.gpg.key",
+            :src => false,
+            :codename => "stretch",
+            :components => "main"
+          },
+
+          :kano_stretch => {
+            :url => "http://dev.kano.me/archive-stretch/",
+            :key => "http://dev.kano.me/archive-stretch/repo.gpg.key",
+            :src => false,
+            :codename => "devel",
+            :components => "main"
+          }
+        },
+        :base_repo => :raspbian_stretch,
+        :packages => []
+      },
+
       :kano_jessie => {
         :name =>"Kano OS (Jessie)",
         :arches => ["armhf"],
