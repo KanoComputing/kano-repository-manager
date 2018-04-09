@@ -26,3 +26,11 @@ on top of many other tools (such as reprepro, debuild, debhelper, and others).
 Here is like it looks like in the terminal:
 
 ![Example of using dr](http://linuxwell.com/assets/images/posts/tco-example.png)
+
+
+## Requirements
+
+In order to generate new build roots you will require `debootstrap`. A bug in
+versions prior to 1.0.72 would cause issues with unpacking packages in a
+foreign environment before processing Pre-Depends, causing packages to fail to
+install. To avoid this issue, ensure that you are using `debootstrap >= 1.0.72`.

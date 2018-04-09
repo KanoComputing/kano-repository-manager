@@ -49,8 +49,8 @@ module Dr
           },
 
           :raspi_foundation_stretch => {
-            :url => "http://dev.kano.me/mirrors/raspberrypi/",
-            :key => "http://dev.kano.me/mirrors/raspberrypi/raspberrypi.gpg.key",
+            :url => "http://dev.kano.me/mirrors/raspberrypi-stretch/",
+            :key => "http://dev.kano.me/mirrors/raspberrypi-stretch/raspberrypi.gpg.key",
             :src => false,
             :codename => "stretch",
             :components => "main"
@@ -81,8 +81,8 @@ module Dr
           },
 
           :raspi_foundation_jessie => {
-            :url => "http://dev.kano.me/mirrors/raspberrypi/",
-            :key => "http://dev.kano.me/mirrors/raspberrypi/raspberrypi.gpg.key",
+            :url => "http://dev.kano.me/mirrors/raspberrypi-jessie/",
+            :key => "http://dev.kano.me/mirrors/raspberrypi-jessie/raspberrypi.gpg.key",
             :src => false,
             :codename => "jessie",
             :components => "main"
