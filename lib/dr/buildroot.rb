@@ -55,7 +55,7 @@ module Dr
           ShellCmd.new umnt_cmd, :tag => "umount"
 
           log :info, "Unmounting the /dev/urandom "
-          umnt2_cmd = "sudo chroot #{tmp} umount -f /dev/urandom"
+          umnt2_cmd = "sudo umount -f #{tmp}/dev/urandom"
           ShellCmd.new umnt2_cmd, :tag => "umount"
 
           log :info, "Cleaning up the buildroot"
