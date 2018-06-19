@@ -48,6 +48,10 @@ module Dr
           ShellCmd.new touch_cmd, :tag => "touch"
           mnt2_cmd = "sudo mount --bind /dev/urandom #{tmp}/dev/urandom"
           ShellCmd.new mnt2_cmd, :tag => "mount2"
+
+          keys_cmd = "sudo cp -r ~/.ssh #{tmp}/root/"
+          ShellCmd.new keys_cmd, :tag => "SSH keys copy"
+
           yield tmp
         ensure
           log :info, "Unmounting the /proc file system"
