@@ -1,5 +1,5 @@
-# Copyright (C) 2014-2017 Kano Computing Ltd.
-# License: http://www.gnu.org/licenses/gpl-2.0.txt GNU General Public License v2
+# Copyright (C) 2014-2018 Kano Computing Ltd.
+# License: http://www.gnu.org/licenses/gpl-2.0.txt GNU GPL v2
 
 require "open3"
 require "tco"
@@ -45,7 +45,7 @@ module Dr
         while line = stdouterr.gets
           @out += line
           if @show_out
-            line = tag(@tag, line) if @tag
+            line = tag(@tag.dup, line) if @tag
             log(:info, line)
           end
         end
