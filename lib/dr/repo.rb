@@ -1,4 +1,4 @@
-# Copyright (C) 2014-2017 Kano Computing Ltd.
+# Copyright (C) 2014-2018 Kano Computing Ltd.
 # License: http://www.gnu.org/licenses/gpl-2.0.txt GNU General Public License v2
 
 require "dr/gitpackage"
@@ -20,6 +20,9 @@ module Dr
 
   class Repo
     include Logger
+
+    # TODO: Migrate all reprepro calls to use mutex
+    @@reprepro_mutex = Mutex.new
 
     attr_reader :location
 
@@ -228,13 +231,10 @@ module Dr
                      "listfilter #{suite} 'Source (== #{pkg_name}) | " +
                      "Package (== #{pkg_name})' " +
                      "2>/dev/null"
-        # When running multiple times in threads, the command can fail so allow
-        # it to retry
-        begin
-          tries ||= 0
+
+        reprepro = nil
+        @@reprepro_mutex.synchronize do
           reprepro = ShellCmd.new reprepro_cmd, :tag => "reprepro"
-        rescue
-          retry if (tries += 1) < 3
         end
         reprepro.out.chomp.each_line do |line|
           subpkg, version = line.split(" ").map(&:chomp)
