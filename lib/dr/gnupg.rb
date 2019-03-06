@@ -18,7 +18,7 @@ module Dr
 
     def generate_key(name, mail, pass)
       #kill_rngd = false
-      #unless File.exists? "/var/run/rngd.pid"
+      #unless File.exist? "/var/run/rngd.pid"
       #  print "Starting rngd (root permissions required) ... "
       #  Kernel.system "sudo rngd -p #{@keyring}/rngd.pid -r /dev/urandom"
       #  kill_rngd = true

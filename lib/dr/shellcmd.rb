@@ -21,7 +21,7 @@ module Dr
       @expect = 0
 
       opts.each do |k, v|
-        self.instance_variable_set("@#{k.to_s}", v)
+        self.instance_variable_set "@#{k}", v
       end
 
       @cmd = cmd

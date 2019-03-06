@@ -24,7 +24,7 @@ module Dr
                  "--format tar #{default_branch} | tar x -C #{tmp}/src"
         ShellCmd.new git_cmd, :tag => "git", :show_out => true
 
-        unless File.exists? "#{tmp}/src/debian/control"
+        unless File.exist? "#{tmp}/src/debian/control"
           log :err, "The debian packaging files not found in the repository"
           raise "Adding a package from #{git_addr} failed"
         end
@@ -46,13 +46,13 @@ module Dr
         end
 
         pkg_dir = "#{repo.location}/packages/#{src_name}"
-        if File.exists? pkg_dir
+        if File.exist? pkg_dir
           log :warn, "The package already exists. Add -f to insert it anyway."
           raise "Adding failed"
         end
 
         log :info, "Adding #{src_name.style "pkg-name"} to the repository"
-        FileUtils.mkdir_p "#{pkg_dir}"
+        FileUtils.mkdir_p pkg_dir.to_s
 
         log :info, "Setting up builds directory"
         FileUtils.mkdir_p "#{pkg_dir}/builds"
@@ -87,7 +87,7 @@ module Dr
 
         checkout branch, src_dir, "#{tmp}/git"
 
-        unless File.exists? "#{src_dir}/debian/control"
+        unless File.exist? "#{src_dir}/debian/control"
           log :err, "The debian packaging files not found in the repository"
           raise "Adding a package from #{git_addr} failed"
         end
@@ -115,7 +115,7 @@ module Dr
 
         src_dir = "#{@repo.location}/packages/#{@name}/source"
         FileUtils.rm_rf src_dir
-        FileUtils.mv "#{tmp}/git", "#{src_dir}"
+        FileUtils.mv "#{tmp}/git", src_dir.to_s
       end
 
       @default_branch = branch
@@ -123,7 +123,7 @@ module Dr
 
     def get_configuration
       md_file = "#{@repo.location}/packages/#{@name}/metadata"
-      if File.exists? md_file
+      if File.exist? md_file
         Utils::symbolise_keys YAML.load_file md_file
       else
         {}
@@ -247,9 +247,7 @@ module Dr
               selected_files = all_files.select { |path| !excluded_files.include?(File.basename(path)) }
               files = selected_files.map { |f| "\"#{File.basename f}\"" }.join " "
               log :info, "Creating orig source tarball"
-              tar = "tar cz -C #{build_dir} " +
-                    "-f #{br}/#{@name}_#{version.upstream}.orig.tar.gz " +
-                    "#{files}"
+              tar = "tar cz -C #{build_dir} -f #{br}/#{@name}_#{version.upstream}.orig.tar.gz #{files}"
               ShellCmd.new tar, :tag => "tar"
 
               apt = "sudo chroot #{br} apt-get update"
