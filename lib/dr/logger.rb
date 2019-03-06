@@ -98,7 +98,7 @@ module Dr
     end
 
     def self.set_verbosity(level)
-      msg = "Message verbosity level not recognised (#{})."
+      msg = "Message verbosity level not recognised (#{level})."
       raise msg unless @@logger_verbosity_levels.has_key? level.to_sym
 
       @@verbosity = level.to_sym

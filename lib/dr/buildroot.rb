@@ -21,14 +21,14 @@ module Dr
         @arch = Dr::config.build_environments[env][:arches][0]
       end
 
-      @location = "#{br_cache}/#{env.to_s}-#{@arch}.tar.gz"
+      @location = "#{br_cache}/#{env}-#{@arch}.tar.gz"
       @env = env
 
       @essential_pkgs = "sudo,vim,ca-certificates,fakeroot,build-essential," +
                         "curl,devscripts,debhelper,git,bc,locales,equivs," +
                         "pkg-config,libfile-fcntllock-perl"
 
-      unless File.exists?(@location)
+      unless File.exist? @location
         setup @env, @arch
       end
     end
@@ -155,7 +155,7 @@ EOF"
       codename = repos[base_repo][:codename]
       url = repos[base_repo][:url]
 
-      log :info, "Bootstrapping #{@env.to_s} (foreign chroot, first stage)"
+      log :info, "Bootstrapping #{@env} (foreign chroot, first stage)"
       cmd = "sudo debootstrap --foreign --variant=buildd --no-check-gpg " +
             "--include=#{@essential_pkgs},#{additional_pkgs} " +
             "--arch=#{@arch} #{codename} #{broot} #{url}"
@@ -186,7 +186,7 @@ EOF"
       codename = repos[base_repo][:codename]
       url = repos[base_repo][:url]
 
-      log :info, "Bootstrapping #{@env.to_s} (native chroot)"
+      log :info, "Bootstrapping #{@env} (native chroot)"
       cmd = "sudo debootstrap --variant=buildd --no-check-gpg " +
             "--include=#{@essential_pkgs},#{additional_pkgs} " +
             "#{codename} #{broot} #{repos[base_repo][:url]}"

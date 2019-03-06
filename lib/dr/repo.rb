@@ -91,7 +91,7 @@ module Dr
 
     def get_configuration
         meta_file = "#{@location}/metadata"
-        if File.exists? meta_file
+        if File.exist? meta_file
           Utils::symbolise_keys YAML.load_file(meta_file)
         else
           {}
@@ -148,11 +148,11 @@ module Dr
     end
 
     def get_package(name)
-      unless File.exists? "#{@packages_dir}/#{name}"
+      unless File.exist? "#{@packages_dir}/#{name}"
         raise "Package #{name.style "pkg-name"} doesn't exist in the repo"
       end
 
-      if File.exists? "#{@packages_dir}/#{name}/source"
+      if File.exist? "#{@packages_dir}/#{name}/source"
         GitPackage.new name, self
       else
         DebPackage.new name, self
@@ -248,7 +248,7 @@ module Dr
       pkg = get_package pkg_name
 
       if version
-        unless pkg.build_exists? version
+        unless pkg.build_exist? version
           raise "Build version '#{version}' not found"
         end
       else
@@ -373,7 +373,7 @@ module Dr
       raise "The package hasn't been built yet." unless hist.length > 0
       version = hist[0] unless version
 
-      unless pkg.build_exists? version
+      unless pkg.build_exist? version
         raise "Build #{version.style "version"} doesn't exist"
       end
 
@@ -385,7 +385,7 @@ module Dr
       raise "Build #{version} for package #{pkg_name} doesn't exist" unless pkg.build_exists? version
 
       md_file = "#{@location}/packages/#{pkg.name}/builds/#{version}/.metadata"
-      if File.exists? md_file
+      if File.exist? md_file
         YAML.load_file md_file
       else
         {}

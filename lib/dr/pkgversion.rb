@@ -109,7 +109,7 @@ module Dr
     end
 
     def source
-      v = "#{upstream}"
+      v = upstream.to_s
       v = "#{epoch}:#{v}" if @epoch > 0
       v << "-#{debian}" if @debian.length > 0
       v
@@ -143,7 +143,7 @@ module Dr
     # in the Debian way
     def debian_version_string_compare(str1, str2)
       phase = :string
-      while true
+      loop do
         return 0 if str1.length == 0 && str2.length == 0
         return -1 if str1.length == 0
         return 1 if str2.length == 0
