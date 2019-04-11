@@ -1,11 +1,11 @@
-# Copyright (C) 2014 Kano Computing Ltd.
-# License: http://www.gnu.org/licenses/gpl-2.0.txt GNU General Public License v2
+# Copyright (C) 2014-2019 Kano Computing Ltd.
+# License: http://www.gnu.org/licenses/gpl-2.0.txt GNU GPL v2
 
 module Dr
   module BuildEnvironments
     @@build_environments = {
       :kano => {
-        :name =>"Kano OS",
+        :name =>"Kano OS (Wheezy)",
         :arches => ["armhf"],
         :repos => {
           :raspbian => {
@@ -40,17 +40,29 @@ module Dr
         :name =>"Kano OS (Stretch)",
         :arches => ["armhf"],
         :repos => {
+          :stretch_bootstrap => {
+            # This is used to debootstrap the system which suffers from the
+            # problem that S3 doesn't like serving URLs with `+` in the path
+            # so use the proxied version of:
+            #     staging.stretch.raspbian.repo.os.kano.me
+            :url => "http://build.os.kano.me/",
+            :key => "http://build.os.kano.me/raspbian.public.key",
+            :src => true,
+            :codename => "stretch",
+            :components => "main contrib non-free rpi",
+            :build_only => true
+          },
           :raspbian_stretch => {
-            :url => "http://www.mirrorservice.org/sites/archive.raspbian.org/raspbian/",
-            :key => "http://www.mirrorservice.org/sites/archive.raspbian.org/raspbian.public.key",
+            :url => "http://staging.stretch.raspbian.repo.os.kano.me/",
+            :key => "http://staging.stretch.raspbian.repo.os.kano.me/raspbian.public.key",
             :src => true,
             :codename => "stretch",
             :components => "main contrib non-free rpi"
           },
 
           :raspi_foundation_stretch => {
-            :url => "http://dev.kano.me/mirrors/raspberrypi-stretch/",
-            :key => "http://dev.kano.me/mirrors/raspberrypi-stretch/raspberrypi.gpg.key",
+            :url => "http://dev.kano.me/raspberrypi-stretch/",
+            :key => "http://dev.kano.me/raspberrypi-stretch/raspberrypi.gpg.key",
             :src => false,
             :codename => "stretch",
             :components => "main"
@@ -64,7 +76,7 @@ module Dr
             :components => "main"
           }
         },
-        :base_repo => :raspbian_stretch,
+        :base_repo => :stretch_bootstrap,
         :packages => []
       },
 
@@ -73,16 +85,16 @@ module Dr
         :arches => ["armhf"],
         :repos => {
           :raspbian_jessie => {
-            :url => "http://www.mirrorservice.org/sites/archive.raspbian.org/raspbian/",
-            :key => "http://www.mirrorservice.org/sites/archive.raspbian.org/raspbian.public.key",
+            :url => "http://staging.jessie.raspbian.repo.os.kano.me/",
+            :key => "http://staging.jessie.raspbian.repo.os.kano.me/raspbian.public.key",
             :src => true,
             :codename => "jessie",
             :components => "main contrib non-free rpi"
           },
 
           :raspi_foundation_jessie => {
-            :url => "http://dev.kano.me/mirrors/raspberrypi-jessie/",
-            :key => "http://dev.kano.me/mirrors/raspberrypi-jessie/raspberrypi.gpg.key",
+            :url => "http://dev.kano.me/raspberrypi-jessie/",
+            :key => "http://dev.kano.me/raspberrypi-jessie/raspberrypi.gpg.key",
             :src => false,
             :codename => "jessie",
             :components => "main"

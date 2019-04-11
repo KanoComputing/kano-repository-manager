@@ -1,5 +1,5 @@
-# Copyright (C) 2014 Kano Computing Ltd.
-# License: http://www.gnu.org/licenses/gpl-2.0.txt GNU General Public License v2
+# Copyright (C) 2014-2019 Kano Computing Ltd.
+# License: http://www.gnu.org/licenses/gpl-2.0.txt GNU GPL v2
 
 require "tco"
 
@@ -98,7 +98,9 @@ module Dr
 
           log :info, "Configuring the build root"
 
-          repo_setup_sequences = repos.map do |name, repo|
+          repo_setup_sequences = repos.reject { |name, repo|
+              repo.key? :build_only and repo[:build_only]
+          }.map do |name, repo|
             seq = "echo 'deb #{repo[:url]} #{repo[:codename]} " +
                   "#{repo[:components]}' >> /etc/apt/sources.list\n"
 
@@ -115,6 +117,7 @@ module Dr
           end
 
           cmd = "sudo chroot #{broot} <<EOF
+            rm /etc/apt/sources.list
             #{repo_setup_sequences.join "\n\n"}
 
             echo 'en_US.UTF-8 UTF-8' >/etc/locale.gen
