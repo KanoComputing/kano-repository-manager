@@ -248,7 +248,7 @@ module Dr
       pkg = get_package pkg_name
 
       if version
-        unless pkg.build_exist? version
+        unless pkg.build_exists? version
           raise "Build version '#{version}' not found"
         end
       else
@@ -373,7 +373,7 @@ module Dr
       raise "The package hasn't been built yet." unless hist.length > 0
       version = hist[0] unless version
 
-      unless pkg.build_exist? version
+      unless pkg.build_exists? version
         raise "Build #{version.style "version"} doesn't exist"
       end
 
