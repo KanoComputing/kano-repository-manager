@@ -31,7 +31,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency "rack", "~> 1.6", ">= 1.6.4"
   spec.add_dependency "thin", "~> 1.6", ">= 1.6.3"
 
-  spec.add_development_dependency "bundler", "~> 1.11", ">= 1.11.2"
+  spec.add_development_dependency "bundler", "~> 2.0", ">= 2.0.1"
   spec.add_development_dependency "rake", "~> 10.3"
   spec.add_development_dependency "rspec", "~> 3.1"
 end
