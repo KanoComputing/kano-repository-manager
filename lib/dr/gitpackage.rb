@@ -259,9 +259,9 @@ rm -rf #{@name}-build-deps_*
 EOF
 EOS
           build = <<-EOS
-sudo chroot #{br} <<EOF
+sudo chroot -E #{br} <<EOF
 cd /#{build_dir_name}
-debuild -i -uc -us -b
+debuild --preserve-env -i -uc -us -b
 EOF
 EOS
 
