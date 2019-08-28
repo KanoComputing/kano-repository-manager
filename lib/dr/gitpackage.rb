@@ -250,6 +250,7 @@ module Dr
               tar = "tar cz -C #{build_dir} -f #{br}/#{@name}_#{version.upstream}.orig.tar.gz #{files}"
               ShellCmd.new tar, :tag => "tar"
 
+              clean = "sudo chroot #{br} apt-get clean"
               apt = "sudo chroot #{br} apt-get update"
               deps = <<-EOS
 sudo chroot #{br} <<EOF
@@ -265,8 +266,11 @@ debuild --preserve-env -i -uc -us -b
 EOF
 EOS
 
+              log :info, "Clean the apt cache"
+              ShellCmd.new clean, :tag => "apt-get-clean", :show_out => true
+
               log :info, "Updating the sources lists"
-              ShellCmd.new apt, :tag => "apt-get", :show_out => true
+              ShellCmd.new apt, :tag => "apt-get-update", :show_out => true
 
               log :info, "Installing build dependencies"
               ShellCmd.new deps, :tag => "mk-build-deps", :show_out => true

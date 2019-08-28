@@ -2,5 +2,5 @@
 # License: http://www.gnu.org/licenses/gpl-2.0.txt GNU GPL v2
 
 module Dr
-  VERSION = "1.3.6"
+  VERSION = "1.3.7"
 end
