@@ -255,11 +255,14 @@ module Dr
               deps = <<-EOS
 sudo chroot #{br} <<EOF
 dpkg-source -b "/#{build_dir_name}"
-mk-build-deps *.dsc -i -t "apt-get --no-install-recommends -y"
+cd #{build_dir_name}
+apt-get build-dep --download-only --yes ../*.dsc
+apt-get build-dep --fix-broken --no-install-recommends --yes ../*.dsc
+cd ..
 rm -rf #{@name}-build-deps_*
 EOF
 EOS
-          build = <<-EOS
+              build = <<-EOS
 sudo -E chroot #{br} <<EOF
 cd /#{build_dir_name}
 debuild --preserve-env -i -uc -us -b
