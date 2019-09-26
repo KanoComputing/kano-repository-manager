@@ -252,6 +252,11 @@ module Dr
 
               clean = "sudo chroot #{br} apt-get clean"
               apt = "sudo chroot #{br} apt-get update"
+              # FIXME: To install the dependencies, we use both the
+              #        `apt-get build-dep` tool to attempt to download the
+              #        packages first as well as the `mk-build-deps` in case
+              #        the first command fails. Ideally, the first command
+              #        would never fail.
               deps = <<-EOS
 sudo chroot #{br} <<EOF
 dpkg-source -b "/#{build_dir_name}"
@@ -259,6 +264,7 @@ cd #{build_dir_name}
 apt-get build-dep --download-only --yes ../*.dsc
 apt-get build-dep --fix-broken --no-install-recommends --yes ../*.dsc
 cd ..
+mk-build-deps *.dsc -i -t "apt-get --no-install-recommends -y"
 rm -rf #{@name}-build-deps_*
 EOF
 EOS
